@@ -122,18 +122,31 @@ class SuperHumanizer:
                 }""", text)
                 page.wait_for_timeout(1000)
 
-            # Locate and click Humanize button
+            # Locate and click Humanize button with resilient actionability
             humanize_btn = page.locator("button:has-text('Humanize')").first
-            humanize_btn.scroll_into_view_if_needed()
+            try:
+                humanize_btn.scroll_into_view_if_needed(timeout=3000)
+            except Exception:
+                pass
             page.wait_for_timeout(500)
 
             # Wait until enabled if necessary
             for _ in range(5):
-                if not humanize_btn.is_disabled():
-                    break
+                try:
+                    if not humanize_btn.is_disabled():
+                        break
+                except Exception:
+                    pass
                 page.wait_for_timeout(800)
 
-            humanize_btn.click(force=True)
+            try:
+                humanize_btn.click(force=True, timeout=5000)
+            except Exception:
+                page.evaluate("""() => {
+                    const btns = Array.from(document.querySelectorAll('button'));
+                    const b = btns.find(x => x.textContent.trim().toLowerCase() === 'humanize');
+                    if (b) b.click();
+                }""")
             print("[SuperHumanizer] Clicked 'Humanize', awaiting output...")
 
             # Wait for either API payload interception or DOM update

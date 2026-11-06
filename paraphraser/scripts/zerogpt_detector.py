@@ -91,16 +91,39 @@ class ZeroGPTDetector:
             except Exception:
                 pass
 
-            # Enter text into the main textarea
+            # Enter text into the main textarea with robust fallbacks
             ta = page.locator("textarea#textArea, textarea[placeholder*='Enter text'], textarea").first
-            ta.scroll_into_view_if_needed()
-            ta.fill(text)
+            try:
+                ta.scroll_into_view_if_needed(timeout=3000)
+            except Exception:
+                pass
+
+            try:
+                ta.fill(text, timeout=4000)
+            except Exception:
+                page.evaluate("""(txt) => {
+                    const el = document.querySelector('textarea#textArea') || document.querySelector('textarea');
+                    if (el) {
+                        const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+                        if (setter) setter.call(el, txt);
+                        else el.value = txt;
+                        el.dispatchEvent(new Event('input', { bubbles: true }));
+                        el.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                }""", text)
             page.wait_for_timeout(800)
 
             # Click Detect Text
             detect_btn = page.locator("button:has-text('Detect Text')").first
-            detect_btn.scroll_into_view_if_needed()
-            detect_btn.click()
+            try:
+                detect_btn.scroll_into_view_if_needed(timeout=3000)
+                detect_btn.click(timeout=4000, force=True)
+            except Exception:
+                page.evaluate("""() => {
+                    const btns = Array.from(document.querySelectorAll('button'));
+                    const b = btns.find(x => x.textContent.includes('Detect Text'));
+                    if (b) b.click();
+                }""")
             print("[ZeroGPT] Clicked 'Detect Text', waiting for complete scan analysis...")
 
             # Wait and poll for completion (up to 45s)
