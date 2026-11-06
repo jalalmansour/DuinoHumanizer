@@ -1,0 +1,19 @@
+# =========================================================================
+# Vercel Deployment Exclusion Manifest
+# Exclude desktop files and local Python backend from Vercel cloud build
+# =========================================================================
+
+# Desktop Python Server & NLP Engines (Handled by api/*.js on Vercel)
+server.py
+secured_db.py
+text_normalizer.py
+requirements.txt
+paraphraser/
+test_*.py
+
+# Electron & Desktop Packaging Scripts
+main.js
+scripts/
+icon.ico
+icon.png
+*.log

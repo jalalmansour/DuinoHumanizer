@@ -1,5 +1,7 @@
 {
   "outputDirectory": "web",
+  "buildCommand": "echo 'Duino Humanizer static bundle ready'",
+  "installCommand": "echo 'No external dependencies required'",
   "cleanUrls": true,
   "trailingSlash": false,
   "headers": [

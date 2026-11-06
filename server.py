@@ -748,6 +748,12 @@ class APIServerHandler(SimpleHTTPRequestHandler):
         self.wfile.write(data)
 
 
+# Top-level entrypoints for Vercel / WSGI / BaseHTTPRequestHandler runners
+handler = APIServerHandler
+app = APIServerHandler
+application = APIServerHandler
+
+
 def verify_windows_dlls():
     import tempfile
     import urllib.request as _urlreq
