@@ -1,9 +1,7 @@
 {
-  "version": 2,
-  "public": true,
+  "outputDirectory": "web",
   "cleanUrls": true,
   "trailingSlash": false,
-  "outputDirectory": "web",
   "headers": [
     {
       "source": "/(.*)",
@@ -16,9 +14,8 @@
       ]
     }
   ],
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/:path*" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
