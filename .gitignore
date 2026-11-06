@@ -1,0 +1,87 @@
+# =========================================================================
+# Duino Humanizer • Git Exclusion Manifest
+# Exclude heavy binaries, packaging artifacts, temporary databases & logs
+# =========================================================================
+
+# Dependencies & Build Artefacts
+node_modules/
+dist/
+build/
+.cache/
+python/
+python_runtime/
+env/
+venv/
+ENV/
+
+# Heavy Archives & Compressed Payloads (>200MB)
+*.7z
+*.zip
+*.tar
+*.gz
+app_payload.7z
+app_payload.zip
+
+# Windows Executables & Compiled Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+*.o
+*.obj
+Checker.exe
+Uninstall.exe
+Checker_Setup.exe
+checker_main.o
+resource.o
+checker_main.c
+resource.rc
+version_info.txt
+Checker.spec
+
+# Legacy Batch Scripts & Packaging Generators
+*.bat
+create_shortcut.vbs
+make_shortcut.ps1
+build_exe.py
+build_native.py
+build_package.py
+package_electron.py
+installer.py
+setup_environment.py
+desktop_launcher.py
+desktop_software.py
+app.py
+
+# Local Secure Vault Databases
+*.db
+*.db-shm
+*.db-wal
+secure_vault.db*
+
+# Runtime Logs & State Markers
+*.log
+electron_runtime.log
+checker_launcher.log
+server.log
+.installed
+.python_deps_ok
+
+# Temporary Storage & Proof Screenshots
+temp_uploads/
+temp_outputs/
+screenshots/
+samples/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# OS & Editor Metadata
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
