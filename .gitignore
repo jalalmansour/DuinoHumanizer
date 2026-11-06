@@ -51,7 +51,6 @@ installer.py
 setup_environment.py
 desktop_launcher.py
 desktop_software.py
-app.py
 
 # Local Secure Vault Databases
 *.db
