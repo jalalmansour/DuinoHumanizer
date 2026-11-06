@@ -212,6 +212,13 @@ const IconTxt = () => (
   </svg>
 );
 
+const IconEdit = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13 }}>
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+  </svg>
+);
+
 function FileFormatBadge({ docType, filename }) {
   let t = (docType || "").toLowerCase();
   if (!t && filename) {
@@ -330,31 +337,188 @@ function runClientSideHumanization(text, cfg) {
 }
 
 function computeClientWordDiff(orig, hum) {
-  const origWords = (orig || "").split(/(\s+)/).filter(Boolean);
-  const humWords = (hum || "").split(/(\s+)/).filter(Boolean);
+  if (!orig && !hum) return { orig_spans: [], hum_spans: [] };
+  if (!orig) return { orig_spans: [], hum_spans: [{ text: hum, changed: true }] };
+  if (!hum) return { orig_spans: [{ text: orig, changed: true }], hum_spans: [] };
 
-  const humSet = new Set(humWords.map(w => w.trim().toLowerCase()).filter(Boolean));
-  const origSet = new Set(origWords.map(w => w.trim().toLowerCase()).filter(Boolean));
+  const tokenize = (str) => str.match(/\S+|\s+/g) || [];
+  const tokens1 = tokenize(orig);
+  const tokens2 = tokenize(hum);
 
-  const orig_spans = origWords.map(w => {
-    const clean = w.trim().toLowerCase();
-    const isSpace = /^\s+$/.test(w);
+  const norm1 = tokens1.map(t => t.trim().toLowerCase().replace(/[^\w]/g, ''));
+  const norm2 = tokens2.map(t => t.trim().toLowerCase().replace(/[^\w]/g, ''));
+
+  const len1 = tokens1.length;
+  const len2 = tokens2.length;
+
+  if (len1 * len2 <= 250000) {
+    const dp = Array.from({ length: len1 + 1 }, () => new Uint16Array(len2 + 1));
+    for (let i = 0; i < len1; i++) {
+      for (let j = 0; j < len2; j++) {
+        if (norm1[i] && norm1[i] === norm2[j]) {
+          dp[i + 1][j + 1] = dp[i][j] + 1;
+        } else {
+          dp[i + 1][j + 1] = Math.max(dp[i + 1][j], dp[i][j + 1]);
+        }
+      }
+    }
+
+    let i = len1;
+    let j = len2;
+    const orig_rev = [];
+    const hum_rev = [];
+
+    while (i > 0 || j > 0) {
+      if (i > 0 && j > 0 && norm1[i - 1] && norm1[i - 1] === norm2[j - 1]) {
+        orig_rev.push({ text: tokens1[i - 1], changed: false });
+        hum_rev.push({ text: tokens2[j - 1], changed: false });
+        i--;
+        j--;
+      } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+        hum_rev.push({ text: tokens2[j - 1], changed: !/^\s+$/.test(tokens2[j - 1]) });
+        j--;
+      } else if (i > 0 && (j === 0 || dp[i][j - 1] < dp[i - 1][j])) {
+        orig_rev.push({ text: tokens1[i - 1], changed: !/^\s+$/.test(tokens1[i - 1]) });
+        i--;
+      }
+    }
+
     return {
-      text: w,
-      changed: !isSpace && clean.length > 1 && !humSet.has(clean)
+      orig_spans: orig_rev.reverse(),
+      hum_spans: hum_rev.reverse()
     };
-  });
+  }
 
-  const hum_spans = humWords.map(w => {
-    const clean = w.trim().toLowerCase();
-    const isSpace = /^\s+$/.test(w);
-    return {
+  // Fallback for huge documents
+  const humSet = new Set(norm2.filter(Boolean));
+  const origSet = new Set(norm1.filter(Boolean));
+
+  return {
+    orig_spans: tokens1.map(w => ({
       text: w,
-      changed: !isSpace && clean.length > 1 && !origSet.has(clean)
-    };
-  });
+      changed: !/^\s+$/.test(w) && !humSet.has(w.trim().toLowerCase().replace(/[^\w]/g, ''))
+    })),
+    hum_spans: tokens2.map(w => ({
+      text: w,
+      changed: !/^\s+$/.test(w) && !origSet.has(w.trim().toLowerCase().replace(/[^\w]/g, ''))
+    }))
+  };
+}
 
-  return { orig_spans, hum_spans };
+function computeClientCharDiff(orig, hum) {
+  if (!orig && !hum) return { orig_spans: [], hum_spans: [] };
+  if (!orig) return { orig_spans: [], hum_spans: [{ text: hum, changed: true }] };
+  if (!hum) return { orig_spans: [{ text: orig, changed: true }], hum_spans: [] };
+
+  const splitParagraphs = (str) => str.split(/(\n+)/);
+
+  const diffChunk = (s1, s2) => {
+    if (s1 === s2) {
+      return {
+        s1_spans: [{ text: s1, changed: false }],
+        s2_spans: [{ text: s2, changed: false }]
+      };
+    }
+    let p = 0;
+    const minLen = Math.min(s1.length, s2.length);
+    while (p < minLen && s1[p] === s2[p]) p++;
+
+    let s = 0;
+    while (s < (minLen - p) && s1[s1.length - 1 - s] === s2[s2.length - 1 - s]) s++;
+
+    const prefix = s1.slice(0, p);
+    const suffix = s ? s1.slice(s1.length - s) : "";
+
+    const mid1 = s1.slice(p, s1.length - s);
+    const mid2 = s2.slice(p, s2.length - s);
+
+    const s1_spans = [];
+    const s2_spans = [];
+
+    if (prefix) {
+      s1_spans.push({ text: prefix, changed: false });
+      s2_spans.push({ text: prefix, changed: false });
+    }
+
+    if (mid1.length * mid2.length <= 160000 && (mid1.length > 0 || mid2.length > 0)) {
+      const len1 = mid1.length;
+      const len2 = mid2.length;
+      const dp = Array.from({ length: len1 + 1 }, () => new Uint16Array(len2 + 1));
+      for (let i = 0; i < len1; i++) {
+        for (let j = 0; j < len2; j++) {
+          if (mid1[i] === mid2[j]) {
+            dp[i + 1][j + 1] = dp[i][j] + 1;
+          } else {
+            dp[i + 1][j + 1] = Math.max(dp[i + 1][j], dp[i][j + 1]);
+          }
+        }
+      }
+
+      let i = len1;
+      let j = len2;
+      const r1 = [];
+      const r2 = [];
+      while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && mid1[i - 1] === mid2[j - 1]) {
+          r1.push({ char: mid1[i - 1], changed: false });
+          r2.push({ char: mid2[j - 1], changed: false });
+          i--;
+          j--;
+        } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+          r2.push({ char: mid2[j - 1], changed: true });
+          j--;
+        } else if (i > 0 && (j === 0 || dp[i][j - 1] < dp[i - 1][j])) {
+          r1.push({ char: mid1[i - 1], changed: true });
+          i--;
+        }
+      }
+
+      r1.reverse();
+      r2.reverse();
+
+      const consolidate = (arr) => {
+        const out = [];
+        for (const item of arr) {
+          if (out.length > 0 && out[out.length - 1].changed === item.changed) {
+            out[out.length - 1].text += item.char;
+          } else {
+            out.push({ text: item.char, changed: item.changed });
+          }
+        }
+        return out;
+      };
+
+      s1_spans.push(...consolidate(r1));
+      s2_spans.push(...consolidate(r2));
+    } else {
+      if (mid1) s1_spans.push({ text: mid1, changed: true });
+      if (mid2) s2_spans.push({ text: mid2, changed: true });
+    }
+
+    if (suffix) {
+      s1_spans.push({ text: suffix, changed: false });
+      s2_spans.push({ text: suffix, changed: false });
+    }
+
+    return { s1_spans, s2_spans };
+  };
+
+  const p1 = splitParagraphs(orig);
+  const p2 = splitParagraphs(hum);
+
+  if (p1.length === p2.length) {
+    const orig_spans = [];
+    const hum_spans = [];
+    for (let k = 0; k < p1.length; k++) {
+      const res = diffChunk(p1[k], p2[k]);
+      orig_spans.push(...res.s1_spans);
+      hum_spans.push(...res.s2_spans);
+    }
+    return { orig_spans, hum_spans };
+  }
+
+  const res = diffChunk(orig, hum);
+  return { orig_spans: res.s1_spans, hum_spans: res.s2_spans };
 }
 
 // =========================================================================
@@ -458,8 +622,11 @@ function DuinoApp() {
     });
   });
 
-  const [liveDiffActive, setLiveDiffActive] = useState(false);
+  const [liveDiffMode, setLiveDiffMode] = useState(() => {
+    return vault.getItem("duino_live_diff_mode", "word");
+  });
   const [liveDiffSpans, setLiveDiffSpans] = useState({ orig_spans: [], hum_spans: [] });
+  const [liveCharDiffSpans, setLiveCharDiffSpans] = useState({ orig_spans: [], hum_spans: [] });
   const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
 
   const [liveHistory, setLiveHistory] = useState(() => {
@@ -468,6 +635,23 @@ function DuinoApp() {
 
   const fileInputRef = useRef(null);
   const timerRef = useRef(null);
+
+  // Automatically calculate both word and character diffs whenever live texts change
+  useEffect(() => {
+    if (liveInputText && liveOutputText) {
+      const wDiff = computeClientWordDiff(liveInputText, liveOutputText);
+      setLiveDiffSpans(wDiff);
+      const cDiff = computeClientCharDiff(liveInputText, liveOutputText);
+      setLiveCharDiffSpans(cDiff);
+    } else {
+      setLiveDiffSpans({ orig_spans: [], hum_spans: [] });
+      setLiveCharDiffSpans({ orig_spans: [], hum_spans: [] });
+    }
+  }, [liveInputText, liveOutputText]);
+
+  useEffect(() => {
+    vault.setItem("duino_live_diff_mode", liveDiffMode);
+  }, [liveDiffMode]);
 
   // Synchronize state with Vault Storage
   useEffect(() => {
@@ -900,30 +1084,12 @@ function DuinoApp() {
       };
       setLiveMetrics(metrics);
 
-      // Compute word diff automatically
-      let diffData = null;
-      try {
-        const diffRes = await fetch("/api/diff-words", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            original_text: liveInputText,
-            humanized_text: data.humanized_text
-          })
-        });
-        if (diffRes.ok) {
-          diffData = await diffRes.json();
-        }
-      } catch (de) {}
-
-      if (!diffData) {
-        diffData = computeClientWordDiff(liveInputText, data.humanized_text);
-      }
-
-      setLiveDiffSpans({
-        orig_spans: diffData.orig_spans || [],
-        hum_spans: diffData.hum_spans || []
-      });
+      // Compute word and character diffs automatically
+      const wDiff = computeClientWordDiff(liveInputText, data.humanized_text);
+      const cDiff = computeClientCharDiff(liveInputText, data.humanized_text);
+      setLiveDiffSpans(wDiff);
+      setLiveCharDiffSpans(cDiff);
+      setLiveDiffMode("word");
 
       // Save to Persistent History Vault
       saveHistoryEntry({
@@ -962,6 +1128,11 @@ function DuinoApp() {
       words: item.word_count || 0,
       chars: (item.humanized_text || "").length,
     });
+    const restoredWordDiff = computeClientWordDiff(item.original_text || "", item.humanized_text || "");
+    const restoredCharDiff = computeClientCharDiff(item.original_text || "", item.humanized_text || "");
+    setLiveDiffSpans(restoredWordDiff);
+    setLiveCharDiffSpans(restoredCharDiff);
+    setLiveDiffMode("word");
     setShowHistoryDrawer(false);
   };
 
@@ -1205,9 +1376,10 @@ function DuinoApp() {
               stepName={liveStepName}
               elapsed={liveElapsed}
               textMetrics={liveMetrics}
-              diffActive={liveDiffActive}
-              setDiffActive={setLiveDiffActive}
-              diffSpans={liveDiffSpans}
+              diffMode={liveDiffMode}
+              setDiffMode={setLiveDiffMode}
+              wordDiffSpans={liveDiffSpans}
+              charDiffSpans={liveCharDiffSpans}
               onExecuteHumanize={handleExecuteLiveHumanization}
               onOpenHistory={() => setShowHistoryDrawer(true)}
             />
@@ -1378,18 +1550,34 @@ function StudioView({
   stepName,
   elapsed,
   textMetrics,
-  diffActive,
-  setDiffActive,
-  diffSpans,
+  diffMode = "word",
+  setDiffMode,
+  wordDiffSpans = { orig_spans: [], hum_spans: [] },
+  charDiffSpans = { orig_spans: [], hum_spans: [] },
   onExecuteHumanize,
   onOpenHistory,
 }) {
   const [studioMode, setStudioMode] = useState("split_text"); // "split_text" or "batch_files"
   const [copiedToast, setCopiedToast] = useState(false);
+  const [showOrigDiff, setShowOrigDiff] = useState(false);
 
   const inputWords = inputText.trim() ? inputText.trim().split(/\s+/).length : 0;
   const inputChars = inputText.length;
   const detectedHeadings = (inputText.match(/^(?:#{1,6}\s+|[IVXLCDM]+\.\s+|[0-9]+\.[0-9]*\s+|Section\s+[0-9]+:?|Chapter\s+[0-9]+:?|Abstract|Introduction|Methodology|Results|Discussion|Conclusion|References)/gim) || []).length;
+
+  // Active diff sets with automatic reactive fallbacks
+  const activeWordSpans = (wordDiffSpans && wordDiffSpans.hum_spans && wordDiffSpans.hum_spans.length > 0)
+    ? wordDiffSpans
+    : (inputText && outputText ? computeClientWordDiff(inputText, outputText) : { orig_spans: [], hum_spans: [] });
+
+  const activeCharSpans = (charDiffSpans && charDiffSpans.hum_spans && charDiffSpans.hum_spans.length > 0)
+    ? charDiffSpans
+    : (inputText && outputText ? computeClientCharDiff(inputText, outputText) : { orig_spans: [], hum_spans: [] });
+
+  const humWordChangedCount = (activeWordSpans.hum_spans || []).filter(s => s.changed).length;
+  const humCharChangedCount = (activeCharSpans.hum_spans || []).filter(s => s.changed).reduce((acc, s) => acc + (s.text ? s.text.length : 0), 0);
+  const origWordChangedCount = (activeWordSpans.orig_spans || []).filter(s => s.changed).length;
+  const origCharChangedCount = (activeCharSpans.orig_spans || []).filter(s => s.changed).reduce((acc, s) => acc + (s.text ? s.text.length : 0), 0);
 
   const handleCopyOutput = () => {
     if (!outputText) return;
@@ -1567,8 +1755,25 @@ function StudioView({
                 <div className="split-panel-title">
                   <IconStudio />
                   <span>Original Text / Input</span>
+                  {showOrigDiff && (
+                    <span className="badge badge-default num-tabular" style={{ marginLeft: "6px" }}>
+                      {diffMode === "char" ? `${origCharChangedCount} Chars Changed` : `${origWordChangedCount} Words Changed`}
+                    </span>
+                  )}
                 </div>
-                <div style={{ display: "flex", gap: "6px" }}>
+                <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                  {inputText && outputText && (
+                    <button
+                      type="button"
+                      className={`btn btn-secondary ${showOrigDiff ? "active" : ""}`}
+                      style={{ padding: "4px 8px", fontSize: "11px" }}
+                      onClick={() => setShowOrigDiff(!showOrigDiff)}
+                      title="Toggle Original Highlight Comparison"
+                    >
+                      <IconEye />
+                      <span>{showOrigDiff ? "Edit Input" : "Original Diff"}</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="btn btn-secondary"
@@ -1605,15 +1810,39 @@ function StudioView({
               </div>
 
               <div className="split-panel-body">
-                {diffActive && diffSpans.orig_spans.length > 0 ? (
-                  <div className="studio-diff-container">
-                    {diffSpans.orig_spans.map((s, idx) => (
-                      s.changed ? (
-                        <span key={idx} className="diff-word-blue" title="Word modified during humanization">{s.text}</span>
-                      ) : (
-                        <span key={idx}>{s.text}</span>
-                      )
-                    ))}
+                {showOrigDiff && (diffMode === "char" ? activeCharSpans.orig_spans.length > 0 : activeWordSpans.orig_spans.length > 0) ? (
+                  <div className="studio-diff-container diff-text-flow">
+                    <div className="diff-summary-bar">
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "11.5px" }}>
+                        <span className="diff-dot-blue" />
+                        <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>
+                          Original Baseline
+                        </span>
+                        <span className="num-tabular" style={{ color: "#93c5fd" }}>
+                          {diffMode === "char" ? `${origCharChangedCount} characters replaced` : `${origWordChangedCount} words modified`}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                        Blue indicates text modified in humanized version
+                      </span>
+                    </div>
+                    {diffMode === "char" ? (
+                      activeCharSpans.orig_spans.map((s, idx) => (
+                        s.changed ? (
+                          <span key={idx} className="diff-char-blue" title="Character replaced">{s.text}</span>
+                        ) : (
+                          <span key={idx}>{s.text}</span>
+                        )
+                      ))
+                    ) : (
+                      activeWordSpans.orig_spans.map((s, idx) => (
+                        s.changed ? (
+                          <span key={idx} className="diff-word-blue" title="Word modified during humanization">{s.text}</span>
+                        ) : (
+                          <span key={idx}>{s.text}</span>
+                        )
+                      ))
+                    )}
                   </div>
                 ) : (
                   <textarea
@@ -1666,16 +1895,35 @@ function StudioView({
                   )}
 
                   {outputText && (
-                    <button
-                      type="button"
-                      className={`btn btn-secondary ${diffActive ? "active" : ""}`}
-                      style={{ padding: "4px 8px", fontSize: "11px" }}
-                      onClick={() => setDiffActive(!diffActive)}
-                      title="Toggle Word Diff Highlights"
-                    >
-                      <IconEye />
-                      <span>{diffActive ? "Editor View" : "Diff Highlights"}</span>
-                    </button>
+                    <div className="diff-view-segmented" role="tablist" aria-label="Diff View Mode">
+                      <button
+                        type="button"
+                        className={`diff-segment-btn ${diffMode === "word" ? "active" : ""}`}
+                        onClick={() => setDiffMode("word")}
+                        title="Highlight modified words"
+                      >
+                        <IconEye />
+                        <span>Word Diff ({humWordChangedCount})</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`diff-segment-btn ${diffMode === "char" ? "active" : ""}`}
+                        onClick={() => setDiffMode("char")}
+                        title="Highlight exact character differences"
+                      >
+                        <IconDiff />
+                        <span>Char Diff ({humCharChangedCount})</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`diff-segment-btn ${diffMode === "off" ? "active" : ""}`}
+                        onClick={() => setDiffMode("off")}
+                        title="Plain editable text mode"
+                      >
+                        <IconEdit />
+                        <span>Plain Editor</span>
+                      </button>
+                    </div>
                   )}
 
                   <button
@@ -1704,15 +1952,45 @@ function StudioView({
               </div>
 
               <div className="split-panel-body">
-                {diffActive && diffSpans.hum_spans.length > 0 ? (
-                  <div className="studio-diff-container">
-                    {diffSpans.hum_spans.map((s, idx) => (
-                      s.changed ? (
-                        <span key={idx} className="diff-word-green" title="Humanized replacement word">{s.text}</span>
-                      ) : (
-                        <span key={idx}>{s.text}</span>
-                      )
-                    ))}
+                {outputText && diffMode !== "off" ? (
+                  <div className="studio-diff-container diff-text-flow">
+                    <div className="diff-summary-bar">
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "11.5px" }}>
+                        <span className="diff-dot-green" />
+                        <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>
+                          {diffMode === "char" ? "Character Diff View" : "Word Diff View"}
+                        </span>
+                        <span className="badge badge-positive num-tabular" style={{ fontSize: "11px" }}>
+                          {diffMode === "char" ? `${humCharChangedCount} chars changed` : `${humWordChangedCount} words humanized`}
+                        </span>
+                        {inputText && (
+                          <span style={{ color: "var(--text-muted)", fontSize: "11px" }}>
+                            • {Math.round(Math.max(0, 100 - (humWordChangedCount / (inputWords || 1)) * 100))}% structural fidelity
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                        {diffMode === "char" ? "Emerald = Added / modified characters" : "Emerald = Humanized replacement words"}
+                      </span>
+                    </div>
+
+                    {diffMode === "char" ? (
+                      activeCharSpans.hum_spans.map((s, idx) => (
+                        s.changed ? (
+                          <span key={idx} className="diff-char-green" title="Humanized replacement character">{s.text}</span>
+                        ) : (
+                          <span key={idx}>{s.text}</span>
+                        )
+                      ))
+                    ) : (
+                      activeWordSpans.hum_spans.map((s, idx) => (
+                        s.changed ? (
+                          <span key={idx} className="diff-word-green" title="Humanized replacement word">{s.text}</span>
+                        ) : (
+                          <span key={idx}>{s.text}</span>
+                        )
+                      ))
+                    )}
                   </div>
                 ) : (
                   <textarea
@@ -2192,12 +2470,17 @@ function DiffView({ queue, results, selectedFile, setSelectedFile }) {
       })
       .then(res => res.json())
       .then(data => {
-        if (data.success) {
+        if (data.success || data.orig_spans) {
           setDiffSpans({ orig_spans: data.orig_spans || [], hum_spans: data.hum_spans || [] });
+        } else {
+          setDiffSpans(computeClientWordDiff(originalText, humanizedText));
         }
         setLoadingDiff(false);
       })
-      .catch(() => setLoadingDiff(false));
+      .catch(() => {
+        setDiffSpans(computeClientWordDiff(originalText, humanizedText));
+        setLoadingDiff(false);
+      });
     } else {
       setDiffSpans({ orig_spans: [], hum_spans: [] });
     }
