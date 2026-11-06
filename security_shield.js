@@ -230,6 +230,14 @@
   const originalFetch = window.fetch;
   window.fetch = function (resource, init) {
     init = init || {};
+
+    const urlStr = typeof resource === 'string' ? resource : (resource && resource.url ? resource.url : '');
+    const isInternal = urlStr.startsWith('/') || (typeof window !== 'undefined' && window.location && urlStr.startsWith(window.location.origin)) || urlStr.includes('/api/');
+
+    if (!isInternal) {
+      return originalFetch.call(this, resource, init);
+    }
+
     init.headers = init.headers || {};
 
     const timestamp = Date.now().toString();
