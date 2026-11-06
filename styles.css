@@ -1777,6 +1777,264 @@ body.app-body {
   }
 }
 
+/* ==========================================================================
+   Output Header & Footer Actions
+   ========================================================================== */
+.output-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.output-footer-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+.output-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.export-btn-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ==========================================================================
+   ZeroGPT Loop Verification Audit Modal
+   ========================================================================== */
+.audit-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeInModal 140ms ease-out;
+}
+
+@keyframes fadeInModal {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.audit-modal {
+  width: 100%;
+  max-width: 640px;
+  max-height: 90vh;
+  background: rgba(14, 16, 22, 0.96);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.75), 0 0 1px rgba(255, 255, 255, 0.12);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.audit-modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-hairline);
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.audit-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.audit-modal-title svg {
+  width: 20px;
+  height: 20px;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.audit-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.audit-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.audit-kpi-card {
+  background: rgba(22, 25, 34, 0.60);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.audit-kpi-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.audit-kpi-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.audit-kpi-sub {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.audit-verdict-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.24);
+  border-radius: var(--radius-md);
+  gap: 12px;
+}
+
+.audit-loop-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.audit-section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.audit-loop-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.audit-step-card {
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(20, 23, 31, 0.50);
+  border: 1px solid var(--border-hairline);
+  transition: all 120ms ease;
+}
+
+.audit-step-card.passed {
+  border-left: 3px solid var(--accent);
+}
+
+.audit-step-card.retrying {
+  border-left: 3px solid #f59e0b;
+}
+
+.audit-step-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.audit-step-badge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+}
+
+.audit-step-action {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.audit-step-details {
+  color: var(--text-secondary);
+  font-size: 11.5px;
+}
+
+.audit-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-hairline);
+}
+
+.audit-meta-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11.5px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-hairline);
+}
+
+.audit-meta-label {
+  color: var(--text-muted);
+}
+
+.audit-meta-val {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.audit-modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border-hairline);
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 /* Mobile Screens (<= 768px) */
 @media (max-width: 768px) {
   .mobile-nav-toggle-btn {
@@ -1975,5 +2233,33 @@ body.app-body {
   .installer-card {
     padding: 18px;
     max-width: 100%;
+  }
+
+  .audit-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .audit-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .output-header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .output-footer-stats {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .output-footer-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .export-btn-group {
+    flex: 1;
+    justify-content: flex-end;
   }
 }
