@@ -353,6 +353,10 @@ class APIServerHandler(SimpleHTTPRequestHandler):
         path = parsed.path
 
         if path == "/api/upload":
+            try:
+                wait_for_engine(timeout=15.0)
+            except Exception:
+                pass
             content_type = self.headers.get("Content-Type", "")
             if "multipart/form-data" in content_type:
                 form = cgi.FieldStorage(
@@ -368,7 +372,15 @@ class APIServerHandler(SimpleHTTPRequestHandler):
                         dest = TEMP_UPLOAD_DIR / safe_name
                         with open(dest, "wb") as f:
                             f.write(item.file.read())
-                        doc_info = UniversalDocumentParser.read(str(dest))
+                        if UniversalDocumentParser is not None:
+                            doc_info = UniversalDocumentParser.read(str(dest))
+                        else:
+                            try:
+                                with open(dest, "r", encoding="utf-8", errors="ignore") as f:
+                                    t = f.read()
+                            except Exception:
+                                t = ""
+                            doc_info = {"doc_type": "text", "char_count": len(t), "word_count": len(t.split()), "text": t, "structured_layout": None}
                         with STATE_LOCK:
                             # Avoid duplicates
                             existing = next((x for x in STATE["queue"] if x["filename"] == safe_name), None)
@@ -391,19 +403,35 @@ class APIServerHandler(SimpleHTTPRequestHandler):
                 self.send_error(400, "Expected multipart/form-data")
 
         elif path == "/api/ingest-path":
+            try:
+                wait_for_engine(timeout=15.0)
+            except Exception:
+                pass
             length = int(self.headers.get("Content-Length", 0))
             body = self.rfile.read(length).decode("utf-8")
             data = json.loads(body)
             raw_path = data.get("path", "").strip()
 
-            resolved = UniversalDocumentParser.resolve_file_path(raw_path)
+            if UniversalDocumentParser is not None:
+                resolved = UniversalDocumentParser.resolve_file_path(raw_path)
+            else:
+                resolved = os.path.abspath(raw_path) if os.path.isfile(raw_path) else None
+
             if resolved and os.path.isfile(resolved):
                 fname = os.path.basename(resolved)
                 safe_name = re.sub(r"[\s\u00a0\u202f]+", " ", fname).strip()
                 dest = TEMP_UPLOAD_DIR / safe_name
                 if Path(resolved).resolve() != dest.resolve():
                     shutil.copy2(resolved, str(dest))
-                doc_info = UniversalDocumentParser.read(str(dest))
+                if UniversalDocumentParser is not None:
+                    doc_info = UniversalDocumentParser.read(str(dest))
+                else:
+                    try:
+                        with open(dest, "r", encoding="utf-8", errors="ignore") as f:
+                            t = f.read()
+                    except Exception:
+                        t = ""
+                    doc_info = {"doc_type": "text", "char_count": len(t), "word_count": len(t.split()), "text": t, "structured_layout": None}
                 with STATE_LOCK:
                     existing = next((x for x in STATE["queue"] if x["filename"] == safe_name), None)
                     if not existing:
