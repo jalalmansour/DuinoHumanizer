@@ -1165,24 +1165,37 @@ function DuinoApp() {
           =================================================================== */}
       <aside className={`app-sidebar ${sidebarCollapsed ? "collapsed" : ""}`}>
         <div className="brand-section">
-          <div className="brand-left">
-            <div className="brand-logo-icon" title="Duino Humanizer">
-              <img src="icon.png" alt="Duino Inc Logo" className="brand-logo-img" />
-            </div>
-            <div className="brand-title-wrap">
-              <div className="brand-title">Duino Humanizer</div>
-              <div className="brand-subtitle">Checker PRO v2.5</div>
-            </div>
-          </div>
+          {sidebarCollapsed ? (
+            <button
+              className="sidebar-expand-logo-btn"
+              onClick={toggleSidebar}
+              title="Expand Sidebar"
+              aria-label="Expand Sidebar"
+            >
+              <IconSidebarExpand />
+            </button>
+          ) : (
+            <>
+              <div className="brand-left">
+                <div className="brand-logo-icon" title="Duino Humanizer">
+                  <img src="icon.png" alt="Duino Inc Logo" className="brand-logo-img" />
+                </div>
+                <div className="brand-title-wrap">
+                  <div className="brand-title">Duino Humanizer</div>
+                  <div className="brand-subtitle">Checker PRO v2.5</div>
+                </div>
+              </div>
 
-          <button
-            className="sidebar-collapse-btn"
-            onClick={toggleSidebar}
-            title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-            aria-label="Toggle Sidebar"
-          >
-            {sidebarCollapsed ? <IconSidebarExpand /> : <IconSidebarCollapse />}
-          </button>
+              <button
+                className="sidebar-collapse-btn"
+                onClick={toggleSidebar}
+                title="Collapse Sidebar"
+                aria-label="Collapse Sidebar"
+              >
+                <IconSidebarCollapse />
+              </button>
+            </>
+          )}
         </div>
 
         {/* Navigation Tabs (Strict Bespoke SVG Icons, 0 Emojis) */}
@@ -1309,15 +1322,6 @@ function DuinoApp() {
         {/* Top Header */}
         <header className="app-header">
           <div className="header-left">
-            {sidebarCollapsed && (
-              <button
-                className="header-collapse-toggle visible"
-                onClick={toggleSidebar}
-                title="Expand Sidebar"
-              >
-                <IconSidebarExpand />
-              </button>
-            )}
             <h1 className="page-title">
               {activeTab === "studio" && "Humanizer Studio"}
               {activeTab === "queue" && "Multi-File Batch Queue"}
