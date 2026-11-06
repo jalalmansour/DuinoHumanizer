@@ -2,13 +2,16 @@
   "name": "duino-humanizer",
   "version": "2.5.0",
   "description": "Checker PRO - Universal MIME-Type Humanizer & Auto-Loop Verifier by J.D | Duino Inc",
-  "main": "main.js",
+  "main": "index.html",
   "scripts": {
-    "start": "electron .",
-    "dev": "electron .",
+    "start": "node -e \"console.log('Duino Humanizer Web App online')\"",
+    "start:electron": "electron .",
+    "dev": "node -e \"console.log('Duino Humanizer Web App dev mode')\"",
+    "dev:electron": "electron .",
     "postinstall": "node -e \"if (!process.env.VERCEL && require('fs').existsSync('scripts/bootstrap-python.js')) { require('child_process').spawnSync(process.execPath, ['scripts/bootstrap-python.js'], { stdio: 'inherit' }); }\"",
     "setup-python": "node scripts/bootstrap-python.js",
-    "build": "electron-builder --win portable"
+    "build": "node -e \"console.log('Duino Humanizer static web bundle ready')\"",
+    "build:electron": "electron-builder --win portable"
   },
   "author": "J.D | Duino Inc",
   "license": "Proprietary",
