@@ -6,6 +6,11 @@
 // Developed by J.D | Duino Inc - All Rights Preserved
 // ==========================================================================
 
+// Skip execution on Vercel / CI cloud build environments
+if (process.env.VERCEL || process.env.NOW_BUILDER || process.env.CI) {
+  process.exit(0);
+}
+
 const { execSync, spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
