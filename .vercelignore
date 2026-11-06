@@ -13,6 +13,4 @@ test_*.py
 
 # Electron & Desktop Packaging Scripts
 main.js
-icon.ico
-icon.png
 *.log

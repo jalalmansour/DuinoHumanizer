@@ -1712,3 +1712,272 @@ body.app-body {
   font-size: 12px;
   color: var(--text-muted);
 }
+
+/* ==========================================================================
+   Responsive Architecture • Mobile, Tablet, Laptop & Desktop Screens
+   ========================================================================== */
+
+/* Mobile Navigation Toggle Button in Header */
+.mobile-nav-toggle-btn {
+  display: none;
+  background: transparent;
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: all 120ms ease;
+}
+
+.mobile-nav-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  border-color: var(--border-subtle);
+}
+
+.mobile-nav-toggle-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Mobile Drawer Backdrop */
+.mobile-backdrop {
+  display: none;
+}
+
+/* Tablet Screens (769px to 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .app-sidebar {
+    width: 220px;
+    min-width: 220px;
+  }
+  .app-sidebar.collapsed {
+    width: 68px;
+    min-width: 68px;
+  }
+  .split-studio-container {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    min-height: auto;
+  }
+  .split-panel {
+    min-height: 440px;
+  }
+  .pipeline-steps {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .view-container {
+    padding: 16px 20px;
+  }
+}
+
+/* Mobile Screens (<= 768px) */
+@media (max-width: 768px) {
+  .mobile-nav-toggle-btn {
+    display: inline-flex;
+  }
+
+  .mobile-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(4, 5, 8, 0.75);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    z-index: 99;
+    animation: fadeIn 150ms ease;
+  }
+
+  .app-sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+    height: 100vh;
+    width: 280px;
+    max-width: 85vw;
+    background: rgba(14, 16, 22, 0.96);
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.85);
+    transform: translateX(0);
+    transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .app-sidebar.collapsed {
+    transform: translateX(-100%);
+    width: 280px;
+    max-width: 85vw;
+    min-width: 280px;
+    padding: 16px 12px;
+    box-shadow: none;
+  }
+
+  .app-sidebar.collapsed .brand-section {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .app-sidebar.collapsed .brand-title-wrap {
+    display: flex;
+    opacity: 1;
+  }
+
+  .app-sidebar.collapsed .sidebar-collapse-btn {
+    display: flex;
+  }
+
+  .app-sidebar.collapsed .nav-item span {
+    display: inline;
+  }
+
+  .app-sidebar.collapsed .config-group {
+    display: flex;
+  }
+
+  .app-sidebar.collapsed .sidebar-footer {
+    display: flex;
+  }
+
+  .app-header {
+    height: 52px;
+    min-height: 52px;
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .page-title {
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .header-badge {
+    display: none;
+  }
+
+  .status-indicator span:last-child {
+    display: none;
+  }
+
+  .status-indicator {
+    padding: 4px 6px;
+  }
+
+  .view-container {
+    padding: 12px;
+    gap: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mode-segmented-tabs {
+    width: 100%;
+    display: flex;
+  }
+
+  .mode-tab-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 6px 8px;
+    font-size: 11.5px;
+  }
+
+  .pipeline-steps {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .split-studio-container {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    min-height: auto;
+  }
+
+  .split-panel {
+    min-height: 380px;
+  }
+
+  .split-panel-header {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+
+  .split-panel-header > div:last-child {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .diff-view-segmented {
+    width: 100%;
+    order: 3;
+    display: flex;
+  }
+
+  .diff-segment-btn {
+    flex: 1;
+    justify-content: center;
+    font-size: 11px;
+    padding: 4px 6px;
+  }
+
+  .split-panel-footer {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+
+  .split-panel-footer > button,
+  .split-panel-footer > div {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .split-panel-footer > div {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .kpi-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .history-drawer {
+    width: 100%;
+    max-width: 100vw;
+  }
+
+  .diff-container {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 480px;
+  }
+
+  .data-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 8px 10px;
+    font-size: 11.5px;
+  }
+
+  .installer-card {
+    padding: 18px;
+    max-width: 100%;
+  }
+}
