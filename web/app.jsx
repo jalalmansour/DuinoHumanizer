@@ -2061,7 +2061,7 @@ function StudioView({
                   {copiedToast && (
                     <span className="toast-badge">
                       <IconCheck />
-                      <span>Copied!</span>
+                      <span>Copied to clipboard</span>
                     </span>
                   )}
 
