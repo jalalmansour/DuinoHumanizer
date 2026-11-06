@@ -1220,12 +1220,25 @@ function DuinoApp() {
   });
 
   const [queue, setQueue] = useState(() => {
-    return vault.getItem("duino_queue_v2", []);
+    try {
+      const raw = vault.getItem("duino_queue_v2", []);
+      return Array.isArray(raw) ? raw : [];
+    } catch (e) {
+      return [];
+    }
   });
 
   const [results, setResults] = useState(() => {
-    return vault.getItem("duino_results_v2", {});
+    try {
+      const raw = vault.getItem("duino_results_v2", {});
+      return raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+    } catch (e) {
+      return {};
+    }
   });
+
+  const safeQueue = Array.isArray(queue) ? queue : [];
+  const safeResults = results && typeof results === "object" && !Array.isArray(results) ? results : {};
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentFile, setCurrentFile] = useState(null);
@@ -1491,9 +1504,15 @@ function DuinoApp() {
       const res = await fetch("/api/queue");
       if (res.ok) {
         const data = await res.json();
-        if (data.queue) setQueue(data.queue);
-        if (data.results) setResults(data.results);
-        if (data.queue && data.queue.length > 0 && !selectedFileForDetails) {
+        if (data && Array.isArray(data.queue)) {
+          setQueue(data.queue);
+        } else {
+          setQueue(prev => Array.isArray(prev) ? prev : []);
+        }
+        if (data && data.results && typeof data.results === "object" && !Array.isArray(data.results)) {
+          setResults(data.results);
+        }
+        if (data && Array.isArray(data.queue) && data.queue.length > 0 && !selectedFileForDetails) {
           setSelectedFileForDetails(data.queue[0].filename);
         }
       }
@@ -1611,11 +1630,11 @@ function DuinoApp() {
   };
 
   const handleStartProcessing = async () => {
-    if (queue.length === 0) return;
+    if (safeQueue.length === 0) return;
     setIsProcessing(true);
 
-    const queueCopy = [...queue];
-    const resultsCopy = { ...results };
+    const queueCopy = [...safeQueue];
+    const resultsCopy = { ...safeResults };
 
     for (let i = 0; i < queueCopy.length; i++) {
       const item = queueCopy[i];
@@ -1871,9 +1890,9 @@ function DuinoApp() {
     );
   }
 
-  const activeResult = selectedFileForDetails ? results[selectedFileForDetails] : null;
+  const activeResult = selectedFileForDetails ? safeResults[selectedFileForDetails] : null;
   const activeQueueItem = selectedFileForDetails
-    ? queue.find(q => q.filename === selectedFileForDetails)
+    ? safeQueue.find(q => q.filename === selectedFileForDetails)
     : null;
 
   return (
@@ -1899,7 +1918,7 @@ function DuinoApp() {
               title="Expand Sidebar"
               aria-label="Expand Sidebar"
             >
-              <IconSidebarExpand />
+              <img src="icon.png" alt="Duino Inc Logo" className="brand-logo-img-collapsed" />
             </button>
           ) : (
             <>
@@ -1946,8 +1965,8 @@ function DuinoApp() {
           >
             <IconQueue />
             <span>Multi-File Queue</span>
-            {queue.length > 0 && (
-              <span className="nav-badge-pill num-tabular">{queue.length}</span>
+            {safeQueue.length > 0 && (
+              <span className="nav-badge-pill num-tabular">{safeQueue.length}</span>
             )}
           </button>
 
@@ -2004,6 +2023,21 @@ function DuinoApp() {
               <option value="Formal">Formal & Executive</option>
               <option value="General">General Publication</option>
               <option value="Blog">Editorial / Blog</option>
+            </select>
+          </div>
+
+          <div className="config-item">
+            <label>Loop Verification Rigor</label>
+            <select
+              className="config-select"
+              value={config.max_loops ?? 15}
+              onChange={(e) => handleConfigChange("max_loops", parseInt(e.target.value, 10))}
+            >
+              <option value="0">Limitless Rotary Mode (Until 100% Human)</option>
+              <option value="5">5 Loops (Fast Track)</option>
+              <option value="10">10 Loops (Standard)</option>
+              <option value="15">15 Loops (Default Rigor)</option>
+              <option value="25">25 Loops (Deep Adversarial)</option>
             </select>
           </div>
 
@@ -2066,7 +2100,7 @@ function DuinoApp() {
               {activeTab === "legal" && "Legal & License Agreement"}
             </h1>
             <span className="header-badge num-tabular">
-              {queue.length} {queue.length === 1 ? "document" : "documents"} queued
+              {safeQueue.length} {safeQueue.length === 1 ? "document" : "documents"} queued
             </span>
           </div>
 
@@ -2091,7 +2125,7 @@ function DuinoApp() {
         <div className="view-container">
           <div style={{ display: activeTab === "studio" ? "flex" : "none", flexDirection: "column", gap: "16px" }}>
             <StudioView
-              queue={queue}
+              queue={safeQueue}
               isProcessing={isProcessing}
               isDragging={isDragging}
               setIsDragging={setIsDragging}
@@ -2127,8 +2161,8 @@ function DuinoApp() {
 
           <div style={{ display: activeTab === "queue" ? "flex" : "none", flexDirection: "column", gap: "16px" }}>
             <QueueView
-              queue={queue}
-              results={results}
+              queue={safeQueue}
+              results={safeResults}
               isProcessing={isProcessing}
               currentFile={currentFile}
               currentEvent={currentEvent}
@@ -2145,8 +2179,8 @@ function DuinoApp() {
 
           <div style={{ display: activeTab === "diff" ? "flex" : "none", flexDirection: "column", gap: "16px" }}>
             <DiffView
-              queue={queue}
-              results={results}
+              queue={safeQueue}
+              results={safeResults}
               selectedFile={selectedFileForDetails}
               setSelectedFile={setSelectedFileForDetails}
             />
@@ -2297,6 +2331,7 @@ function StudioView({
   onExecuteHumanize,
   onOpenHistory,
 }) {
+  const safeQueue = Array.isArray(queue) ? queue : [];
   const [studioMode, setStudioMode] = useState("split_text"); // "split_text" or "batch_files"
   const [copiedToast, setCopiedToast] = useState(false);
   const [showOrigDiff, setShowOrigDiff] = useState(false);
@@ -2423,7 +2458,7 @@ function StudioView({
           onClick={() => setStudioMode("batch_files")}
         >
           <IconQueue />
-          <span>Document Batch Mode ({queue.length})</span>
+          <span>Document Batch Mode ({safeQueue.length})</span>
         </button>
       </div>
 
@@ -2901,7 +2936,7 @@ function StudioView({
                 <div>
                   <div className="card-title">Files in Batch Queue</div>
                   <div className="card-subtitle">
-                    {queue.length} {queue.length === 1 ? "file" : "files"} queued for verification
+                    {safeQueue.length} {safeQueue.length === 1 ? "file" : "files"} queued for verification
                   </div>
                 </div>
               </div>
@@ -2911,7 +2946,7 @@ function StudioView({
                   type="button"
                   className="btn btn-secondary"
                   onClick={handleClearQueue}
-                  disabled={queue.length === 0 || isProcessing}
+                  disabled={safeQueue.length === 0 || isProcessing}
                 >
                   <IconTrash />
                   <span>Clear Queue</span>
@@ -2920,7 +2955,7 @@ function StudioView({
                   type="button"
                   className="btn btn-danger"
                   onClick={handleStopAll}
-                  disabled={!isProcessing && !queue.some(q => q.status === "QUEUED" || q.status === "PROCESSING")}
+                  disabled={!isProcessing && !safeQueue.some(q => q.status === "QUEUED" || q.status === "PROCESSING")}
                 >
                   <IconStop />
                   <span>Stop All</span>
@@ -2929,7 +2964,7 @@ function StudioView({
                   type="button"
                   className="btn btn-primary"
                   onClick={handleStartProcessing}
-                  disabled={queue.length === 0 || isProcessing}
+                  disabled={safeQueue.length === 0 || isProcessing}
                 >
                   <IconPlay />
                   <span>{isProcessing ? "Processing..." : "Start Humanization"}</span>
@@ -2937,7 +2972,7 @@ function StudioView({
               </div>
             </div>
 
-            {queue.length === 0 ? (
+            {safeQueue.length === 0 ? (
               <div style={{ padding: "40px", textAlign: "center", color: "var(--text-muted)" }}>
                 No documents in queue. Drag and drop files above or paste a file path.
               </div>
@@ -2955,7 +2990,7 @@ function StudioView({
                     </tr>
                   </thead>
                   <tbody>
-                    {queue.map((item, idx) => {
+                    {safeQueue.map((item, idx) => {
                       const struct = item.structured_layout || {};
                       const secCount = (struct.sections || []).length;
                       const refCount = (struct.references || []).length;
@@ -3236,22 +3271,26 @@ function QueueView({
   handleStopAll,
   handleStopFile
 }) {
+  const safeQueue = Array.isArray(queue) ? queue : [];
+  const safeResults = results && typeof results === "object" && !Array.isArray(results) ? results : {};
+  const currentActiveResult = activeResult || safeResults[selectedFile];
+  const currentActiveItem = activeQueueItem || safeQueue.find(q => q.filename === selectedFile);
   const percentStr = Math.round(progress * 100);
 
-  const baselineScore = activeResult
-    ? (activeResult.baseline_ai_score ?? activeResult.initial_score ?? 0)
+  const baselineScore = currentActiveResult
+    ? (currentActiveResult.baseline_ai_score ?? currentActiveResult.initial_score ?? 0)
     : null;
-  const finalScore = activeResult
-    ? (activeResult.final_ai_score ?? activeResult.final_score ?? 0)
+  const finalScore = currentActiveResult
+    ? (currentActiveResult.final_ai_score ?? currentActiveResult.final_score ?? 0)
     : null;
-  const humanScore = activeResult
-    ? (activeResult.final_human_score ?? (finalScore !== null ? Math.max(0, 100 - finalScore) : 100))
+  const humanScore = currentActiveResult
+    ? (currentActiveResult.final_human_score ?? (finalScore !== null ? Math.max(0, 100 - finalScore) : 100))
     : null;
-  const verdict = activeResult
-    ? (activeResult.final_verdict || activeResult.verdict || (finalScore !== null && finalScore < 7.0 ? "Human Written" : "AI Detected"))
-    : (activeQueueItem?.status || "QUEUED");
-  const description = activeResult
-    ? (activeResult.final_description || activeResult.description || "ZeroGPT verification check completed.")
+  const verdict = currentActiveResult
+    ? (currentActiveResult.final_verdict || currentActiveResult.verdict || (finalScore !== null && finalScore < 7.0 ? "Human Written" : "AI Detected"))
+    : (currentActiveItem?.status || "QUEUED");
+  const description = currentActiveResult
+    ? (currentActiveResult.final_description || currentActiveResult.description || "ZeroGPT verification check completed.")
     : "ZeroGPT automated detection scan";
 
   return (
@@ -3302,9 +3341,9 @@ function QueueView({
         )}
       </div>
 
-      {queue.length > 0 && (
+      {safeQueue.length > 0 && (
         <div style={{ display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "4px" }}>
-          {queue.map((item, idx) => (
+          {safeQueue.map((item, idx) => (
             <button
               key={idx}
               type="button"
@@ -3545,12 +3584,14 @@ function QueueView({
 // 3. SIDE-BY-SIDE LAYOUT DIFF VIEW
 // =========================================================================
 function DiffView({ queue, results, selectedFile, setSelectedFile }) {
+  const safeQueue = Array.isArray(queue) ? queue : [];
+  const safeResults = results && typeof results === "object" && !Array.isArray(results) ? results : {};
   const [highlightDiff, setHighlightDiff] = useState(true);
   const [diffSpans, setDiffSpans] = useState({ orig_spans: [], hum_spans: [] });
   const [loadingDiff, setLoadingDiff] = useState(false);
 
-  const activeQueueItem = queue.find(q => q.filename === selectedFile);
-  const activeResult = results[selectedFile];
+  const activeQueueItem = safeQueue.find(q => q.filename === selectedFile);
+  const activeResult = safeResults[selectedFile];
 
   const originalText = activeQueueItem ? activeQueueItem.text : "No document selected.";
   const humanizedText = activeResult
@@ -3588,9 +3629,9 @@ function DiffView({ queue, results, selectedFile, setSelectedFile }) {
 
   return (
     <>
-      {queue.length > 0 && (
+      {safeQueue.length > 0 && (
         <div style={{ display: "flex", gap: "8px", overflowX: "auto" }}>
-          {queue.map((item, idx) => (
+          {safeQueue.map((item, idx) => (
             <button
               key={idx}
               type="button"

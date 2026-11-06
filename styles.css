@@ -247,6 +247,14 @@ body.app-body {
   stroke-width: 1.75;
 }
 
+.brand-logo-img-collapsed {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  object-fit: contain;
+  display: block;
+}
+
 .app-sidebar.collapsed .brand-section {
   display: flex;
   justify-content: center;
@@ -1713,9 +1721,9 @@ body.app-body {
    Responsive Architecture • Mobile, Tablet, Laptop & Desktop Screens
    ========================================================================== */
 
-/* Mobile Navigation Toggle Button in Header */
+/* Mobile Navigation Toggle Button in Header (Strictly hidden on desktop/laptop) */
 .mobile-nav-toggle-btn {
-  display: none;
+  display: none !important;
   background: transparent;
   border: 1px solid var(--border-hairline);
   border-radius: var(--radius-sm);
@@ -2038,7 +2046,7 @@ body.app-body {
 /* Mobile Screens (<= 768px) */
 @media (max-width: 768px) {
   .mobile-nav-toggle-btn {
-    display: inline-flex;
+    display: inline-flex !important;
   }
 
   .mobile-backdrop {

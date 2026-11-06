@@ -237,9 +237,16 @@ class LoopParaphraseEngine:
         best_verdict = base_check.get("verdict", "")
         best_desc = base_check.get("description", "")
 
-        for loop_idx in range(1, self.max_loops + 1):
+        loop_idx = 0
+        is_limitless = (self.max_loops == 0)
+        # Limitless runs until quality gate passes, with safety threshold of 50
+        max_iterations = 50 if is_limitless else max(1, self.max_loops)
+
+        while loop_idx < max_iterations:
+            loop_idx += 1
             report["iterations_completed"] = loop_idx
-            print(f"\n--- LOOP ITERATION {loop_idx}/{self.max_loops} ---")
+            loop_tag = f"LIMITLESS LOOP #{loop_idx} (Target: <{self.target_max_ai}% AI)" if is_limitless else f"LOOP ITERATION {loop_idx}/{self.max_loops}"
+            print(f"\n--- {loop_tag} ---")
 
             # 1. Clean slop and prepare input
             prep_text = self.clean_slop(current_candidate)
@@ -328,10 +335,45 @@ class LoopParaphraseEngine:
 
 
 if __name__ == "__main__":
-    sample = (
-        "In the contemporary landscape of artificial intelligence, it is crucial to recognize "
-        "that large language models play a pivotal role in revolutionizing modern workflows."
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Duino Humanizer Playwright Closed-Loop Verifier")
+    parser.add_argument("--text", type=str, default="", help="Text to humanize and verify")
+    parser.add_argument("--file", type=str, default="", help="Path to input file")
+    parser.add_argument("--max-loops", type=int, default=15, help="Maximum loops (0 for limitless)")
+    parser.add_argument("--target-ai", type=float, default=7.0, help="Target maximum AI score")
+    parser.add_argument("--model", type=str, default="Super Ultra", help="Model name")
+    parser.add_argument("--purpose", type=str, default="Academic", help="Optimization style")
+    parser.add_argument("--headless", action="store_true", default=True, help="Run headless browser")
+    parser.add_argument("--no-headless", dest="headless", action="store_false", help="Run headful browser")
+    parser.add_argument("--json", action="store_true", help="Print only JSON to stdout")
+
+    args = parser.parse_args()
+
+    input_text = args.text
+    if args.file and os.path.exists(args.file):
+        try:
+            with open(args.file, "r", encoding="utf-8") as f:
+                input_text = f.read()
+        except Exception as e:
+            if not args.json:
+                print(f"Failed to read file: {e}")
+
+    if not input_text:
+        input_text = (
+            "In the contemporary landscape of artificial intelligence, it is crucial to recognize "
+            "that large language models play a pivotal role in revolutionizing modern workflows."
+        )
+
+    engine = LoopParaphraseEngine(
+        headless=args.headless,
+        max_loops=args.max_loops,
+        target_max_ai=args.target_ai,
+        model=args.model,
+        purpose=args.purpose
     )
-    engine = LoopParaphraseEngine(headless=True, max_loops=2)
-    res = engine.run(sample)
-    print("\nFINAL REPORT:\n", json.dumps(res, indent=2))
+    res = engine.run(input_text)
+    if args.json:
+        print(json.dumps(res, indent=2))
+    else:
+        print("\nFINAL REPORT:\n", json.dumps(res, indent=2))
