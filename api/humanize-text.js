@@ -118,9 +118,9 @@ const BASE_AI_MUTATIONS = [
 const STYLE_MUTATIONS = {
   Academic: [
     [/\bclearly proves\b/gi, "strongly suggests"],
-    [/\bundeniably shows\b/gi, "substantially indicates"],
-    [/\bobvious fact that\b/gi, "empirically observed reality that"],
-    [/\beverybody knows\b/gi, "the established consensus indicates"],
+    [/\bundeniably shows\b/gi, "indicates"],
+    [/\bobvious fact that\b/gi, "observation that"],
+    [/\beverybody knows\b/gi, "consensus suggests"],
     [/\bhuge amount\b/gi, "substantial volume"],
     [/\ba lot of\b/gi, "considerable"],
     [/\bgot\b/gi, "obtained"],

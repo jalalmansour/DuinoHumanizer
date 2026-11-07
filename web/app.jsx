@@ -1335,7 +1335,7 @@ function DuinoApp() {
   });
 
   const [liveDiffMode, setLiveDiffMode] = useState(() => {
-    return vault.getItem("duino_live_diff_mode", "word");
+    return vault.getItem("duino_live_diff_mode", "clean");
   });
   const [liveDiffSpans, setLiveDiffSpans] = useState({ orig_spans: [], hum_spans: [] });
   const [liveCharDiffSpans, setLiveCharDiffSpans] = useState({ orig_spans: [], hum_spans: [] });
@@ -2152,19 +2152,21 @@ function DuinoApp() {
             <h1 className="page-title">
               {activeTab === "studio" && "Humanizer Studio"}
               {activeTab === "queue" && "Multi-File Batch Queue"}
-              {activeTab === "diff" && "Side-by-Side Layout Diff"}
-              {activeTab === "gallery" && "Verification Proof Gallery"}
-              {activeTab === "legal" && "Legal & License Agreement"}
+              {activeTab === "diff" && "Side-by-Side Diff"}
+              {activeTab === "gallery" && "Proof Gallery"}
+              {activeTab === "legal" && "Legal & Security"}
             </h1>
-            <span className="header-badge num-tabular">
-              {safeQueue.length} {safeQueue.length === 1 ? "document" : "documents"} queued
-            </span>
+            {activeTab === "queue" && safeQueue.length > 0 && (
+              <span className="header-badge num-tabular">
+                {safeQueue.length} {safeQueue.length === 1 ? "document" : "documents"}
+              </span>
+            )}
           </div>
 
           <div className="header-right">
             <div className="status-indicator">
               <span className={`status-dot ${isProcessing || liveIsHumanizing ? "processing" : "active"}`} />
-              <span>{isProcessing || liveIsHumanizing ? "Engine active" : "Engine ready"}</span>
+              <span>{isProcessing || liveIsHumanizing ? "Verifying..." : "Ready"}</span>
             </div>
 
             <button
@@ -2381,7 +2383,7 @@ function StudioView({
   stepName,
   elapsed,
   textMetrics,
-  diffMode = "word",
+  diffMode = "clean",
   setDiffMode,
   wordDiffSpans = { orig_spans: [], hum_spans: [] },
   charDiffSpans = { orig_spans: [], hum_spans: [] },
@@ -2594,7 +2596,79 @@ function StudioView({
                     </span>
                   )}
                 </div>
-                <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  {/* Group 1: Document Upload & Paste */}
+                  <div className="toolbar-group">
+                    <input
+                      type="file"
+                      id="studio-file-upload"
+                      style={{ display: "none" }}
+                      accept=".docx,.doc,.pdf,.txt,.md,.rtf,.html,.tex"
+                      onChange={async (e) => {
+                        const f = e.target.files && e.target.files[0];
+                        if (f) {
+                          try {
+                            const parsed = await parseDocumentFile(f);
+                            if (parsed && parsed.text) {
+                              setInputText(parsed.text);
+                            }
+                          } catch (err) {}
+                          e.target.value = "";
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ padding: "4px 8px", fontSize: "11px" }}
+                      onClick={() => {
+                        const el = document.getElementById("studio-file-upload");
+                        if (el) el.click();
+                      }}
+                      title="Upload & Parse Document (DOCX, PDF, TXT, MD)"
+                    >
+                      <IconUpload />
+                      <span>Upload</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ padding: "4px 8px", fontSize: "11px" }}
+                      onClick={handlePasteClipboard}
+                      title="Paste from clipboard"
+                    >
+                      <IconPaste />
+                      <span>Paste</span>
+                    </button>
+                  </div>
+
+                  {/* Group 2: Text Sanitation & Clearing */}
+                  <div className="toolbar-group">
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ padding: "4px 8px", fontSize: "11px" }}
+                      onClick={handleSanitizeText}
+                      title="Sanitize text & normalize invisible characters"
+                      disabled={!inputText.trim()}
+                    >
+                      <IconWand />
+                      <span>Sanitize</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ padding: "4px 8px", fontSize: "11px" }}
+                      onClick={() => setInputText("")}
+                      disabled={!inputText.trim()}
+                      title="Clear input"
+                    >
+                      <IconTrash />
+                      <span>Clear</span>
+                    </button>
+                  </div>
+
+                  {/* Group 3: Comparison View Toggle */}
                   {inputText && outputText && (
                     <button
                       type="button"
@@ -2607,69 +2681,6 @@ function StudioView({
                       <span>{showOrigDiff ? "Edit Input" : "Original Diff"}</span>
                     </button>
                   )}
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ padding: "4px 8px", fontSize: "11px" }}
-                    onClick={handlePasteClipboard}
-                    title="Paste from clipboard"
-                  >
-                    <IconPaste />
-                    <span>Paste</span>
-                  </button>
-                  <input
-                    type="file"
-                    id="studio-file-upload"
-                    style={{ display: "none" }}
-                    accept=".docx,.doc,.pdf,.txt,.md,.rtf,.html,.tex"
-                    onChange={async (e) => {
-                      const f = e.target.files && e.target.files[0];
-                      if (f) {
-                        try {
-                          const parsed = await parseDocumentFile(f);
-                          if (parsed && parsed.text) {
-                            setInputText(parsed.text);
-                          }
-                        } catch (err) {}
-                        e.target.value = "";
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ padding: "4px 8px", fontSize: "11px" }}
-                    onClick={() => {
-                      const el = document.getElementById("studio-file-upload");
-                      if (el) el.click();
-                    }}
-                    title="Upload & Parse Document (DOCX, PDF, TXT, MD)"
-                  >
-                    <IconUpload />
-                    <span>Upload</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ padding: "4px 8px", fontSize: "11px" }}
-                    onClick={handleSanitizeText}
-                    title="Sanitize text & normalize invisible characters"
-                    disabled={!inputText.trim()}
-                  >
-                    <IconWand />
-                    <span>Sanitize</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ padding: "4px 8px", fontSize: "11px" }}
-                    onClick={() => setInputText("")}
-                    disabled={!inputText.trim()}
-                    title="Clear input"
-                  >
-                    <IconTrash />
-                    <span>Clear</span>
-                  </button>
                 </div>
               </div>
 
@@ -2742,12 +2753,7 @@ function StudioView({
               <div className="split-panel-header">
                 <div className="split-panel-title">
                   <IconCheck />
-                  <span>Humanized Output</span>
-                  {textMetrics.final_score !== null && (
-                    <span className="badge badge-positive num-tabular" style={{ marginLeft: "6px" }}>
-                      {textMetrics.final_score}% AI • {textMetrics.human_score}% Human
-                    </span>
-                  )}
+                  <span>Humanized Deliverable</span>
                 </div>
 
                 <div className="output-header-actions">
@@ -2762,11 +2768,20 @@ function StudioView({
                     <div className="diff-view-segmented" role="tablist" aria-label="Diff View Mode">
                       <button
                         type="button"
-                        className={`diff-segment-btn ${diffMode === "word" ? "active" : ""}`}
-                        onClick={() => setDiffMode("word")}
-                        title="Highlight modified words"
+                        className={`diff-segment-btn ${diffMode === "clean" ? "active" : ""}`}
+                        onClick={() => setDiffMode("clean")}
+                        title="Pristine editorial reading view"
                       >
                         <IconEye />
+                        <span>Reading View</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`diff-segment-btn ${diffMode === "word" ? "active" : ""}`}
+                        onClick={() => setDiffMode("word")}
+                        title="Highlight modified words with subtle underlines"
+                      >
+                        <IconDiff />
                         <span>Word Diff ({humWordChangedCount})</span>
                       </button>
                       <button
@@ -2818,7 +2833,7 @@ function StudioView({
                     style={{ padding: "4px 10px", fontSize: "11px" }}
                     onClick={handleCopyOutput}
                     disabled={!outputText}
-                    title="Copy deliverable with 100% fidelity"
+                    title="Copy deliverable"
                   >
                     <IconCopy />
                     <span>Copy</span>
@@ -2829,13 +2844,13 @@ function StudioView({
               <div className="split-panel-body">
                 {isHumanizingText ? (
                   <div className="studio-diff-container" style={{ display: "flex", flexDirection: "column", gap: "16px", justifyContent: "center", alignItems: "center", textAlign: "center", minHeight: "360px" }}>
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", maxWidth: "420px", width: "100%" }}>
-                      <div className="status-dot processing" style={{ width: "12px", height: "12px" }} />
-                      <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", maxWidth: "420px", width: "100%" }}>
+                      <div className="status-dot processing" style={{ width: "10px", height: "10px" }} />
+                      <div style={{ fontSize: "14px", fontWeight: 500, color: "var(--text-primary)" }}>
                         {stepName || "Humanizing Text & Calibrating Style..."}
                       </div>
-                      <div className="progress-bar-track" style={{ width: "100%", height: "6px" }}>
-                        <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
+                      <div className="progress-container" style={{ width: "100%" }}>
+                        <div className="progress-bar" style={{ width: `${progress}%` }} />
                       </div>
                       <div style={{ fontSize: "11.5px", color: "var(--text-muted)", display: "flex", gap: "14px" }}>
                         <span>Step {step} of 4</span>
@@ -2843,6 +2858,12 @@ function StudioView({
                         <span className="num-tabular">Elapsed: {formatElapsed(elapsed)}</span>
                       </div>
                     </div>
+                  </div>
+                ) : outputText && diffMode === "clean" ? (
+                  <div className="studio-diff-container clean-reading-flow">
+                    {outputText.split(/\n\s*\n/).map((para, idx) => (
+                      <p key={idx} className="reading-paragraph">{para}</p>
+                    ))}
                   </div>
                 ) : outputText && diffMode !== "off" ? (
                   <div className="studio-diff-container diff-text-flow">
@@ -2852,8 +2873,8 @@ function StudioView({
                         <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>
                           {diffMode === "char" ? "Character Diff View" : "Word Diff View"}
                         </span>
-                        <span className="badge badge-positive num-tabular" style={{ fontSize: "11px" }}>
-                          {diffMode === "char" ? `${humCharChangedCount} chars changed` : `${humWordChangedCount} words humanized`}
+                        <span className="num-tabular" style={{ color: "var(--accent)", fontSize: "11px" }}>
+                          {diffMode === "char" ? `${humCharChangedCount} chars modified` : `${humWordChangedCount} words modified`}
                         </span>
                         {inputText && (
                           <span style={{ color: "var(--text-muted)", fontSize: "11px" }}>
@@ -2862,14 +2883,14 @@ function StudioView({
                         )}
                       </div>
                       <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                        {diffMode === "char" ? "Emerald = Added / modified characters" : "Emerald = Humanized replacement words"}
+                        {diffMode === "char" ? "Subtle underline indicates modified characters" : "Subtle underline indicates humanized word choices"}
                       </span>
                     </div>
 
                     {diffMode === "char" ? (
                       activeCharSpans.hum_spans.map((s, idx) => (
                         s.changed ? (
-                          <span key={idx} className="diff-char-green" title="Humanized replacement character">{s.text}</span>
+                          <span key={idx} className="diff-char-green" title="Modified character">{s.text}</span>
                         ) : (
                           <span key={idx}>{s.text}</span>
                         )
@@ -2877,7 +2898,7 @@ function StudioView({
                     ) : (
                       activeWordSpans.hum_spans.map((s, idx) => (
                         s.changed ? (
-                          <span key={idx} className="diff-word-green" title="Humanized replacement word">{s.text}</span>
+                          <span key={idx} className="diff-word-green" title="Humanized replacement">{s.text}</span>
                         ) : (
                           <span key={idx}>{s.text}</span>
                         )
@@ -2898,11 +2919,11 @@ function StudioView({
                 <div className="output-footer-stats">
                   <span>Words: <strong className="num-tabular" style={{ color: "var(--text-primary)" }}>{outputText.trim() ? outputText.trim().split(/\s+/).length.toLocaleString() : 0}</strong></span>
                   <span>Chars: <strong className="num-tabular" style={{ color: "var(--text-primary)" }}>{outputText.length.toLocaleString()}</strong></span>
-                  {textMetrics.loops_executed && (
-                    <span>Loops: <strong className="num-tabular" style={{ color: "var(--accent)" }}>{textMetrics.loops_executed}</strong></span>
-                  )}
-                  {textMetrics.anchors_preserved !== undefined && (
-                    <span>Anchors: <strong className="num-tabular" style={{ color: "var(--text-primary)" }}>{textMetrics.anchors_preserved}</strong></span>
+                  {textMetrics.final_score !== null && (
+                    <span className="verified-pill">
+                      <IconCheck />
+                      <span>ZeroGPT Verified: <strong className="num-tabular">{textMetrics.final_score}% AI</strong> ({textMetrics.human_score}% Human) • <strong className="num-tabular">{textMetrics.loops_executed || 1}</strong> loop{(textMetrics.loops_executed || 1) > 1 ? 's' : ''}</span>
+                    </span>
                   )}
                 </div>
 
@@ -2916,7 +2937,7 @@ function StudioView({
                     title="Re-run humanization loop verification"
                   >
                     <IconRefresh />
-                    <span>Re-Run Loop</span>
+                    <span>Re-Run</span>
                   </button>
 
                   <div className="export-btn-group">
@@ -2926,7 +2947,7 @@ function StudioView({
                       style={{ padding: "4px 8px", fontSize: "11px" }}
                       onClick={() => handleExportText("docx")}
                       disabled={!outputText}
-                      title="Export valid Microsoft Word DOCX"
+                      title="Export Microsoft Word DOCX"
                     >
                       <IconDocx />
                       <span>DOCX</span>
@@ -2937,7 +2958,7 @@ function StudioView({
                       style={{ padding: "4px 8px", fontSize: "11px" }}
                       onClick={() => handleExportText("pdf")}
                       disabled={!outputText}
-                      title="Export valid Adobe PDF"
+                      title="Export Adobe PDF"
                     >
                       <IconPdf />
                       <span>PDF</span>
