@@ -5,8 +5,6 @@
 // =========================================================================
 
 const path = require('path');
-const { UniversalDocumentParser } = require('./document_parser.js');
-const { TextNormalizer } = require('./text_normalizer.js');
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -17,6 +15,15 @@ module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
+    let UniversalDocumentParser;
+    let TextNormalizer;
+    try {
+      UniversalDocumentParser = require('./document_parser.js').UniversalDocumentParser;
+      TextNormalizer = require('./text_normalizer.js').TextNormalizer;
+    } catch (reqErr) {
+      return res.status(500).json({ error: "Failed to load document parser: " + reqErr.message, stack: reqErr.stack });
+    }
+
     const {
       filename = "document.txt",
       data = "",
