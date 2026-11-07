@@ -9,10 +9,10 @@
 // Comprehensive 120+ Adversarial Anti-AI Cliché & Academic Restructuring Rules
 const BASE_AI_MUTATIONS = [
   // Academic & Research AI Clichés
-  [/\bIn the contemporary landscape of\b/gi, "In current practice,"],
-  [/\bIn today's fast-paced digital age\b/gi, "Currently,"],
-  [/\bIn today's digital age\b/gi, "In contemporary settings,"],
-  [/\bIn an era characterized by\b/gi, "As"],
+  [/\bIn the contemporary landscape of,?\s*/gi, "In current practice, "],
+  [/\bIn today's fast-paced digital age,?\s*/gi, "Today, "],
+  [/\bIn today's digital age,?\s*/gi, "Today, "],
+  [/\bIn an era characterized by,?\s*/gi, "As "],
   [/\bdelve into\b/gi, "examine"],
   [/\bdelves into\b/gi, "examines"],
   [/\bdelving into\b/gi, "examining"],
