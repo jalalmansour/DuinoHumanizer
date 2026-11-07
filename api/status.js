@@ -12,8 +12,13 @@ module.exports = (req, res) => {
     humanized_words: 428900
   };
   try {
-    const { getVaultSummary } = require('../paraphraser/scripts/secured_db.js');
-    const summary = getVaultSummary();
+    let secDb;
+    try {
+      secDb = require('./paraphraser/scripts/secured_db.js');
+    } catch (_) {
+      secDb = require('../paraphraser/scripts/secured_db.js');
+    }
+    const summary = secDb.getVaultSummary();
     vaultStats = {
       total_runs: (summary.total_documents_vaulted || 0) + 142,
       humanized_words: 428900,

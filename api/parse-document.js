@@ -5,8 +5,21 @@
 // =========================================================================
 
 const path = require('path');
-const { UniversalDocumentParser } = require('../paraphraser/scripts/document_parser.js');
-const { TextNormalizer } = require('../paraphraser/scripts/text_normalizer.js');
+let docParserModule = null;
+try {
+  docParserModule = require('./paraphraser/scripts/document_parser.js');
+} catch (_) {
+  docParserModule = require('../paraphraser/scripts/document_parser.js');
+}
+const { UniversalDocumentParser } = docParserModule;
+
+let textNormModule = null;
+try {
+  textNormModule = require('./paraphraser/scripts/text_normalizer.js');
+} catch (_) {
+  textNormModule = require('../paraphraser/scripts/text_normalizer.js');
+}
+const { TextNormalizer } = textNormModule;
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');

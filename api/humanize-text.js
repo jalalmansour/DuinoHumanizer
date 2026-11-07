@@ -299,25 +299,36 @@ module.exports = async (req, res) => {
     const maxIterations = isLimitless ? 12 : Math.min(Math.max(parsedLoops || 4, 1), 25);
 
     // Live Integration: Execute native JavaScript loop_verifier.js against ZeroGPT & SuperHumanizer
-    const fs = require('fs');
-    const path = require('path');
-    const { LoopParaphraseEngine } = require('../paraphraser/scripts/loop_verifier.js');
+    let loopVerifierModule = null;
+    try {
+      loopVerifierModule = require('./paraphraser/scripts/loop_verifier.js');
+    } catch (_) {
+      try {
+        loopVerifierModule = require('../paraphraser/scripts/loop_verifier.js');
+      } catch (e) {
+        console.warn('[Duino Humanizer API] Could not locate loop_verifier.js:', e.message);
+      }
+    }
+
+    const LoopParaphraseEngine = loopVerifierModule ? loopVerifierModule.LoopParaphraseEngine : null;
 
     console.log(`[Duino Humanizer API] Initiating Live Verification Engine (Model: ${model}, Target AI: <${targetThreshold}%)...`);
 
     let jsResult = null;
-    try {
-      const engine = new LoopParaphraseEngine({
-        headless: true,
-        max_loops: isLimitless ? 0 : maxIterations,
-        target_max_ai: targetThreshold,
-        model: model,
-        purpose: purpose
-      });
+    if (LoopParaphraseEngine) {
+      try {
+        const engine = new LoopParaphraseEngine({
+          headless: true,
+          max_loops: isLimitless ? 0 : maxIterations,
+          target_max_ai: targetThreshold,
+          model: model,
+          purpose: purpose
+        });
 
-      jsResult = await engine.run(rawInput);
-    } catch (engineErr) {
-      console.warn('[Duino Humanizer API] Live engine execution notice:', engineErr.message);
+        jsResult = await engine.run(rawInput);
+      } catch (engineErr) {
+        console.warn('[Duino Humanizer API] Live engine execution notice:', engineErr.message);
+      }
     }
 
     if (jsResult && jsResult.final_text) {
