@@ -57,6 +57,7 @@ desktop_software.py
 *.db-shm
 *.db-wal
 secure_vault.db*
+secure_vault.json*
 
 # Runtime Logs & State Markers
 *.log

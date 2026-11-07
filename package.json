@@ -9,6 +9,9 @@
     "dev": "node scripts/dev-server.js",
     "dev:open": "node scripts/dev-server.js --open",
     "dev:electron": "electron .",
+    "paraphrase": "node paraphraser/paraphraser_cli.js",
+    "verify-engine": "node paraphraser/scripts/loop_verifier.js",
+    "test:e2e": "node scripts/verify_platform.js",
     "postinstall": "node -e \"if (!process.env.VERCEL && require('fs').existsSync('scripts/bootstrap-python.js')) { require('child_process').spawnSync(process.execPath, ['scripts/bootstrap-python.js'], { stdio: 'inherit' }); }\"",
     "setup-python": "node scripts/bootstrap-python.js",
     "build": "node -e \"console.log('Duino Humanizer static web bundle ready')\"",
@@ -20,5 +23,8 @@
     "@electron/asar": "^4.3.1",
     "electron": "31.7.7",
     "rcedit": "^5.0.2"
+  },
+  "dependencies": {
+    "playwright-core": "^1.65.0"
   }
 }

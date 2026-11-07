@@ -298,68 +298,68 @@ module.exports = async (req, res) => {
     const isLimitless = parsedLoops === 0;
     const maxIterations = isLimitless ? 12 : Math.min(Math.max(parsedLoops || 4, 1), 25);
 
-    // Optional Playwright Integration: Execute loop_verifier.py when requested and available
+    // Optional Playwright Integration: Execute native JavaScript loop_verifier.js
     const fs = require('fs');
     const path = require('path');
-    const { execFile } = require('child_process');
+    const jsScriptPath = path.resolve(__dirname, '..', 'paraphraser', 'scripts', 'loop_verifier.js');
 
-    const pythonCandidate = 'C:\\Users\\jalal\\AppData\\Local\\Programs\\Python\\Python311\\python.exe';
-    const scriptPath = path.resolve(__dirname, '..', 'paraphraser', 'scripts', 'loop_verifier.py');
-
-    if ((use_playwright || process.env.USE_PLAYWRIGHT === '1') && fs.existsSync(pythonCandidate) && fs.existsSync(scriptPath)) {
+    if ((use_playwright || process.env.USE_PLAYWRIGHT === '1') && fs.existsSync(jsScriptPath)) {
       try {
-        const pyArgs = [
-          scriptPath,
-          '--text', rawInput,
-          '--max-loops', String(isLimitless ? 0 : maxIterations),
-          '--target-ai', String(targetThreshold),
-          '--model', model,
-          '--purpose', purpose,
-          '--json'
-        ];
-
-        const pyResult = await new Promise((resolve, reject) => {
-          execFile(pythonCandidate, pyArgs, { timeout: 180000, maxBuffer: 10 * 1024 * 1024 }, (err, stdout) => {
-            if (err) return reject(err);
-            try {
-              const parsed = JSON.parse(stdout);
-              resolve(parsed);
-            } catch (pe) {
-              reject(pe);
-            }
-          });
+        const { LoopParaphraseEngine } = require('../paraphraser/scripts/loop_verifier.js');
+        const engine = new LoopParaphraseEngine({
+          headless: true,
+          max_loops: isLimitless ? 0 : maxIterations,
+          target_max_ai: targetThreshold,
+          model: model,
+          purpose: purpose
         });
 
-        if (pyResult && pyResult.final_text) {
-          const finalHumanScore = pyResult.final_human_score ?? parseFloat((100 - (pyResult.final_ai_score || 0)).toFixed(1));
+        const jsResult = await engine.run(rawInput);
+        if (jsResult && jsResult.final_text) {
+          const finalHumanScore = jsResult.final_human_score ?? parseFloat((100 - (jsResult.final_ai_score || 0)).toFixed(1));
+          
+          // Log to secured database vault
+          try {
+            const { saveDocumentRecord } = require('../paraphraser/scripts/secured_db.js');
+            saveDocumentRecord({
+              filename: 'playwright_stream.txt',
+              original_text: rawInput,
+              humanized_text: jsResult.final_text,
+              baseline_ai: jsResult.baseline_ai_score || 0.0,
+              final_ai: jsResult.final_ai_score || 0.0,
+              word_count: jsResult.final_text.split(/\s+/).filter(Boolean).length,
+              status: 'COMPLETED'
+            });
+          } catch (ve) {}
+
           return res.status(200).json({
             success: true,
-            humanized_text: pyResult.final_text,
-            baseline_ai_score: pyResult.baseline_ai_score,
-            final_ai_score: pyResult.final_ai_score,
+            humanized_text: jsResult.final_text,
+            baseline_ai_score: jsResult.baseline_ai_score,
+            final_ai_score: jsResult.final_ai_score,
             final_human_score: finalHumanScore,
-            verdict: pyResult.final_verdict || "Human Written",
-            description: pyResult.final_description || "Playwright ZeroGPT verification pass complete.",
+            verdict: jsResult.final_verdict || "Human Written",
+            description: jsResult.final_description || "Native JavaScript ZeroGPT verification pass complete.",
             zerogpt_result: {
-              is_human: (pyResult.final_ai_score || 0) < targetThreshold,
-              ai_percentage: pyResult.final_ai_score,
+              is_human: (jsResult.final_ai_score || 0) < targetThreshold,
+              ai_percentage: jsResult.final_ai_score,
               human_percentage: finalHumanScore,
-              verdict: pyResult.final_verdict || "ZeroGPT Undetectable",
+              verdict: jsResult.final_verdict || "ZeroGPT Undetectable",
               status: "PASS",
               confidence: "High"
             },
-            loops_executed: pyResult.iterations_completed || 1,
-            loop_history: pyResult.history || [],
-            screenshots: pyResult.screenshots || [],
+            loops_executed: jsResult.iterations_completed || 1,
+            loop_history: jsResult.history || [],
+            screenshots: jsResult.screenshots || [],
             model: model,
             purpose: purpose,
             target_ai: targetThreshold,
-            word_count: (pyResult.final_text || "").split(/\s+/).filter(Boolean).length,
-            char_count: (pyResult.final_text || "").length
+            word_count: (jsResult.final_text || "").split(/\s+/).filter(Boolean).length,
+            char_count: (jsResult.final_text || "").length
           });
         }
       } catch (e) {
-        // Fall through to serverless NLP loop verification engine
+        console.warn('[Humanize] Native JS engine fallback to serverless NLP:', e.message);
       }
     }
 
@@ -440,6 +440,20 @@ module.exports = async (req, res) => {
     const words = finalHumanizedText.trim().split(/\s+/).filter(Boolean).length;
     const chars = finalHumanizedText.length;
     const finalHumanScore = parseFloat((100 - currentAiScore).toFixed(1));
+
+    // Log to secured database vault
+    try {
+      const { saveDocumentRecord } = require('../paraphraser/scripts/secured_db.js');
+      saveDocumentRecord({
+        filename: 'serverless_stream.txt',
+        original_text: rawInput,
+        humanized_text: finalHumanizedText,
+        baseline_ai: baselineScore,
+        final_ai: currentAiScore,
+        word_count: words,
+        status: 'COMPLETED'
+      });
+    } catch (ve) {}
 
     return res.status(200).json({
       success: true,

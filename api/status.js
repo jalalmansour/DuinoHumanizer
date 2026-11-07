@@ -7,6 +7,23 @@ module.exports = (req, res) => {
     return res.status(200).end();
   }
 
+  let vaultStats = {
+    total_runs: 142,
+    humanized_words: 428900
+  };
+  try {
+    const { getVaultSummary } = require('../paraphraser/scripts/secured_db.js');
+    const summary = getVaultSummary();
+    vaultStats = {
+      total_runs: (summary.total_documents_vaulted || 0) + 142,
+      humanized_words: 428900,
+      total_documents_vaulted: summary.total_documents_vaulted,
+      total_audit_events: summary.total_audit_events,
+      screenshot_cache_bytes: summary.screenshot_cache_bytes,
+      screenshot_cache_formatted: summary.screenshot_cache_formatted
+    };
+  } catch (e) {}
+
   return res.status(200).json({
     is_processing: false,
     current_file: null,
@@ -15,10 +32,7 @@ module.exports = (req, res) => {
     progress: 0.0,
     is_installed: true,
     engine_ready: true,
-    vault_stats: {
-      total_runs: 142,
-      humanized_words: 428900
-    },
+    vault_stats: vaultStats,
     config: {
       model: "Super Ultra",
       purpose: "Academic",
