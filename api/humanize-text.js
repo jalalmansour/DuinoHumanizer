@@ -298,12 +298,19 @@ module.exports = async (req, res) => {
     const isLimitless = parsedLoops === 0;
     const maxIterations = isLimitless ? 12 : Math.min(Math.max(parsedLoops || 4, 1), 25);
 
-    // Optional Playwright Integration: Execute native JavaScript loop_verifier.js
+    // Playwright Browser Automation Integration: Execute native JavaScript loop_verifier.js
     const fs = require('fs');
     const path = require('path');
     const jsScriptPath = path.resolve(__dirname, '..', 'paraphraser', 'scripts', 'loop_verifier.js');
 
-    if ((use_playwright || process.env.USE_PLAYWRIGHT === '1') && fs.existsSync(jsScriptPath)) {
+    const shouldRunPlaywright = (
+      use_playwright === true ||
+      process.env.USE_PLAYWRIGHT === '1' ||
+      (!process.env.VERCEL && use_playwright !== false)
+    );
+
+    if (shouldRunPlaywright && fs.existsSync(jsScriptPath)) {
+      console.log(`[Duino API] Executing JS Playwright automation against https://superhumanizer.ai/ and https://www.zerogpt.com/...`);
       try {
         const { LoopParaphraseEngine } = require('../paraphraser/scripts/loop_verifier.js');
         const engine = new LoopParaphraseEngine({

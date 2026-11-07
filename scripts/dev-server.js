@@ -11,6 +11,9 @@ const path = require('path');
 const url = require('url');
 const { exec } = require('child_process');
 
+// Force Playwright browser automation on local dev server
+process.env.USE_PLAYWRIGHT = '1';
+
 const PORT = parseInt(process.env.PORT, 10) || 3000;
 const ROOT_DIR = path.resolve(__dirname, '..');
 const WEB_DIR = path.join(ROOT_DIR, 'web');

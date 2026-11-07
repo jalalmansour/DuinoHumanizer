@@ -1732,15 +1732,30 @@ function DuinoApp() {
           anchors_preserved: item.metadata ? item.metadata.length : 0
         };
       } else {
-        setCurrentEvent("Executing ZeroGPT pre-flight baseline scan...");
-        setProgress(45);
-        await new Promise(r => setTimeout(r, 250));
+        setCurrentEvent("Executing Playwright ZeroGPT scan & SuperHumanizer loop...");
+        setProgress(50);
 
-        setCurrentEvent("Running Super Ultra rotary humanizer loop...");
-        setProgress(75);
-        await new Promise(r => setTimeout(r, 350));
+        try {
+          const res = await fetch("/api/humanize-text", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              text: rawContent,
+              model: config?.model || "Super Ultra",
+              purpose: config?.purpose || "Academic",
+              target_ai: config?.target_ai || 7.0,
+              max_loops: config?.max_loops || 15,
+              use_playwright: true
+            })
+          });
+          if (res.ok) {
+            humanizedResult = await res.json();
+          }
+        } catch (_) {}
 
-        humanizedResult = runClientSideHumanization(rawContent, config);
+        if (!humanizedResult) {
+          humanizedResult = runClientSideHumanization(rawContent, config);
+        }
       }
 
       setProgress(100);
@@ -1812,7 +1827,8 @@ function DuinoApp() {
             model: config?.model || "Super Ultra",
             purpose: config?.purpose || "Academic",
             target_ai: config?.target_ai || 7.0,
-            max_loops: config?.max_loops || 15
+            max_loops: config?.max_loops || 15,
+            use_playwright: true
           })
         });
 
