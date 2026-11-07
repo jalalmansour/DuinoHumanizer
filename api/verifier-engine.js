@@ -177,8 +177,8 @@ class SuperHumanizer {
       clearTimeout(timeout);
 
       if (!res.ok) {
-        const errBody = await res.json().catch(() => ({}));
-        throw new Error(`SuperHumanizer HTTP ${res.status}: ${errBody.error || res.statusText}`);
+        const errText = await res.text().catch(() => '');
+        throw new Error(`SuperHumanizer HTTP ${res.status}: ${errText.slice(0, 300)}`);
       }
 
       const data = await res.json();
