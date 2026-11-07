@@ -366,8 +366,20 @@ class LoopParaphraseEngine {
 
       const mode = loop % 2 === 1 ? this.model : 'Super Lite';
       console.log(`[Maker] Calling SuperHumanizer.ai (${mode})...`);
-      const shRes = await this.superhumanizer.humanize(prepText, { mode: mode, tone: this.purpose });
-      const candidate = shRes.humanized_text || prepText;
+      let candidate = prepText;
+      let makerSource = 'SuperHumanizer Live API';
+
+      try {
+        const shRes = await this.superhumanizer.humanize(prepText, { mode: mode, tone: this.purpose });
+        if (shRes && shRes.humanized_text) {
+          candidate = shRes.humanized_text;
+          makerSource = 'SuperHumanizer Live API';
+        }
+      } catch (shErr) {
+        console.warn(`[Maker Notice] SuperHumanizer gateway notice: ${shErr.message}. Applying adversarial syntactic realignment...`);
+        candidate = this.applyBurstiness(prepText, loop);
+        makerSource = 'Adversarial Syntactic Engine';
+      }
 
       console.log(`[Checker] Verifying candidate on ZeroGPT.com...`);
       const zgRes = await this.detector.detect(candidate);
@@ -377,6 +389,7 @@ class LoopParaphraseEngine {
       report.history.push({
         iteration: loop,
         mode: mode,
+        maker_source: makerSource,
         ai_score: aiScore,
         human_score: humanScore,
         verdict: zgRes.verdict,

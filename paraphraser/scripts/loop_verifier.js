@@ -245,13 +245,18 @@ class LoopParaphraseEngine {
       const mode = loopIdx % 2 === 1 ? this.model : 'Super Lite';
       console.log(`[Maker] Running SuperHumanizer.ai (Mode: ${mode})...`);
 
-      const humanizeRes = await this.superhumanizer.humanize(prepText, {
-        mode: mode,
-        screenshots_dir: this.screenshotsDir
-      });
-      if (humanizeRes.screenshot) report.screenshots.push(humanizeRes.screenshot);
-
-      const candidateText = humanizeRes.humanized_text || prepText;
+      let candidateText = prepText;
+      try {
+        const humanizeRes = await this.superhumanizer.humanize(prepText, {
+          mode: mode,
+          screenshots_dir: this.screenshotsDir
+        });
+        if (humanizeRes.screenshot) report.screenshots.push(humanizeRes.screenshot);
+        candidateText = humanizeRes.humanized_text || prepText;
+      } catch (shErr) {
+        console.warn(`[Maker Notice] SuperHumanizer notice: ${shErr.message}. Applying adversarial realignment...`);
+        candidateText = this.applyAdversarialMutation(prepText, loopIdx);
+      }
 
       // 3. Checker Phase: Verify on ZeroGPT
       console.log('[Checker] Verifying candidate on ZeroGPT...');
