@@ -300,13 +300,19 @@ module.exports = async (req, res) => {
 
     // Live Integration: Execute native JavaScript loop_verifier.js against ZeroGPT & SuperHumanizer
     let loopVerifierModule = null;
+    let loadErr = null;
+    let execErr = null;
+
     try {
       loopVerifierModule = require('./paraphraser/scripts/loop_verifier.js');
-    } catch (_) {
+    } catch (e1) {
+      loadErr = e1;
       try {
         loopVerifierModule = require('../paraphraser/scripts/loop_verifier.js');
-      } catch (e) {
-        console.warn('[Duino Humanizer API] Could not locate loop_verifier.js:', e.message);
+        loadErr = null;
+      } catch (e2) {
+        loadErr = e2;
+        console.warn('[Duino Humanizer API] Could not locate loop_verifier.js:', e2.message);
       }
     }
 
@@ -327,6 +333,7 @@ module.exports = async (req, res) => {
 
         jsResult = await engine.run(rawInput);
       } catch (engineErr) {
+        execErr = engineErr;
         console.warn('[Duino Humanizer API] Live engine execution notice:', engineErr.message);
       }
     }
@@ -338,8 +345,13 @@ module.exports = async (req, res) => {
 
       // Log to secured database vault
       try {
-        const { saveDocumentRecord } = require('../paraphraser/scripts/secured_db.js');
-        saveDocumentRecord({
+        let secDb;
+        try {
+          secDb = require('./paraphraser/scripts/secured_db.js');
+        } catch (_) {
+          secDb = require('../paraphraser/scripts/secured_db.js');
+        }
+        secDb.saveDocumentRecord({
           filename: 'live_stream.txt',
           original_text: rawInput,
           humanized_text: jsResult.final_text,
@@ -374,6 +386,16 @@ module.exports = async (req, res) => {
         target_ai: targetThreshold,
         word_count: wordCount,
         char_count: charCount
+      });
+    }
+
+    // If live engine had an error, report it directly so we diagnose accurately
+    if (loadErr || execErr) {
+      return res.status(500).json({
+        error: "Live Verification Engine error",
+        loadError: loadErr ? (loadErr.stack || loadErr.message) : null,
+        execError: execErr ? (execErr.stack || execErr.message) : null,
+        hasModule: !!loopVerifierModule
       });
     }
 
