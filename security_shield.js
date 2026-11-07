@@ -14,26 +14,42 @@
   // -------------------------------------------------------------------------
   const VAULT_SALT = 'DUINO-X-VAULT-K9X#842';
 
-  function xorEncrypt(str) {
+  function vaultEncrypt(str) {
     try {
-      let res = '';
-      for (let i = 0; i < str.length; i++) {
-        res += String.fromCharCode(str.charCodeAt(i) ^ VAULT_SALT.charCodeAt(i % VAULT_SALT.length));
+      const bytes = new TextEncoder().encode(str);
+      const saltBytes = new TextEncoder().encode(VAULT_SALT);
+      const xored = new Uint8Array(bytes.length);
+      for (let i = 0; i < bytes.length; i++) {
+        xored[i] = bytes[i] ^ saltBytes[i % saltBytes.length];
       }
-      return btoa(encodeURIComponent(res));
+      let bin = '';
+      const chunk = 0x8000;
+      for (let i = 0; i < xored.length; i += chunk) {
+        bin += String.fromCharCode.apply(null, xored.subarray(i, Math.min(i + chunk, xored.length)));
+      }
+      return btoa(bin);
     } catch (e) {
-      return btoa(unescape(encodeURIComponent(str)));
+      try {
+        return btoa(unescape(encodeURIComponent(str)));
+      } catch (_) {
+        return str;
+      }
     }
   }
 
-  function xorDecrypt(str) {
+  function vaultDecrypt(str) {
     try {
-      const decoded = atob(str);
-      let res = '';
-      for (let i = 0; i < decoded.length; i++) {
-        res += String.fromCharCode(decoded.charCodeAt(i) ^ VAULT_SALT.charCodeAt(i % VAULT_SALT.length));
+      const bin = atob(str);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) {
+        bytes[i] = bin.charCodeAt(i);
       }
-      return decodeURIComponent(res);
+      const saltBytes = new TextEncoder().encode(VAULT_SALT);
+      const unxored = new Uint8Array(bytes.length);
+      for (let i = 0; i < bytes.length; i++) {
+        unxored[i] = bytes[i] ^ saltBytes[i % saltBytes.length];
+      }
+      return new TextDecoder().decode(unxored);
     } catch (e) {
       try {
         return decodeURIComponent(escape(atob(str)));
@@ -47,7 +63,7 @@
     setItem: function (key, val) {
       try {
         const valStr = typeof val === 'string' ? val : JSON.stringify(val);
-        const encVal = xorEncrypt(valStr);
+        const encVal = vaultEncrypt(valStr);
         localStorage.setItem(`_dno_${key}`, encVal);
       } catch (e) {}
     },
@@ -56,7 +72,12 @@
         // Try encrypted key first
         const rawEnc = localStorage.getItem(`_dno_${key}`);
         if (rawEnc) {
-          const dec = xorDecrypt(rawEnc);
+          const dec = vaultDecrypt(rawEnc);
+          // Check for corrupted legacy URL-encoded strings
+          if (dec && typeof dec === 'string' && (dec.startsWith('%00') || dec.startsWith('%0C') || dec.startsWith('%3C'))) {
+            localStorage.removeItem(`_dno_${key}`);
+            return defaultVal !== undefined ? defaultVal : null;
+          }
           try {
             return JSON.parse(dec);
           } catch (_) {
@@ -66,6 +87,10 @@
         // Fallback to legacy raw key if exists, then migrate
         const rawLegacy = localStorage.getItem(key);
         if (rawLegacy) {
+          if (typeof rawLegacy === 'string' && (rawLegacy.startsWith('%00') || rawLegacy.startsWith('%0C') || rawLegacy.startsWith('%3C'))) {
+            localStorage.removeItem(key);
+            return defaultVal !== undefined ? defaultVal : null;
+          }
           try {
             const parsed = JSON.parse(rawLegacy);
             this.setItem(key, parsed);

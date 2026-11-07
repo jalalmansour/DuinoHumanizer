@@ -165,7 +165,16 @@ class UniversalDocumentParser {
       }
     } catch (_) {}
 
-    return buffer.toString('utf8', 0, Math.min(buffer.length, 1000000));
+    // Fallback: search for <w:t> tags in raw buffer if decompression failed
+    try {
+      const rawStr = buffer.toString('utf8');
+      const tMatches = rawStr.match(/<w:t(?:\s+[^>]*)?>([^<]+)<\/w:t>/gi);
+      if (tMatches && tMatches.length > 0) {
+        return tMatches.map(m => m.replace(/<[^>]+>/g, '').trim()).filter(Boolean).join('\n\n');
+      }
+    } catch (_) {}
+
+    return '';
   }
 
   /**
@@ -228,7 +237,16 @@ class UniversalDocumentParser {
       if (filtered.length > 0) return filtered.join('\n');
     } catch (_) {}
 
-    return buffer.toString('utf8', 0, Math.min(buffer.length, 1000000));
+    // Fallback: search for plaintext strings in parentheses without binary garbage
+    try {
+      const rawStr = buffer.toString('latin1');
+      const pMatch = rawStr.match(/\(([A-Za-z0-9 ,.;:!?'"\n\-]{3,})\)/g);
+      if (pMatch && pMatch.length > 0) {
+        return pMatch.map(s => s.slice(1, -1).trim()).filter(Boolean).join(' ');
+      }
+    } catch (_) {}
+
+    return '';
   }
 
   /**

@@ -531,6 +531,23 @@ function sanitizeClientText(rawText, autoFormatHeadings = true, breakLongParas =
   // 6. Emojis
   cleaned = cleaned.replace(CLIENT_EMOJIS, "");
 
+  // 6b. Remove illegal null bytes and non-printable control characters
+  cleaned = cleaned.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+
+  // 6c. Detect and clean corrupted legacy URL-encoded XOR tokens
+  if (typeof cleaned === "string" && (cleaned.startsWith("%00") || cleaned.startsWith("%0C") || cleaned.startsWith("%3C"))) {
+    try {
+      const decoded = decodeURIComponent(cleaned);
+      if (decoded && !decoded.startsWith("%00") && !decoded.startsWith("%0C")) {
+        cleaned = decoded;
+      } else {
+        cleaned = "";
+      }
+    } catch (_) {
+      cleaned = "";
+    }
+  }
+
   // 7. Collapse spaces per line
   const lines = cleaned.split("\n");
   const normalizedLines = lines.map(l => l.replace(/[ \t]+/g, " ").trim());
@@ -793,10 +810,10 @@ async function parseDocumentFile(file) {
       if (!docXmlFound) {
         const fullStr = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
         const matches = fullStr.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g);
-        rawText = matches ? matches.map(m => m.replace(/<[^>]+>/g, "")).join(" ") : await file.text();
+        rawText = matches ? matches.map(m => m.replace(/<[^>]+>/g, "").trim()).filter(Boolean).join(" ") : "";
       }
     } catch (e) {
-      rawText = await file.text();
+      rawText = "";
     }
   } else if (ext === "pdf") {
     try {
@@ -863,9 +880,14 @@ async function parseDocumentFile(file) {
       }
 
       const filtered = textChunks.filter(line => !/^\s*Page\s+\d+(\s+of\s+\d+)?\s*$/i.test(line));
-      rawText = filtered.length > 0 ? filtered.join("\n") : await file.text();
+      if (filtered.length > 0) {
+        rawText = filtered.join("\n");
+      } else {
+        const readable = str.match(/\(([A-Za-z0-9 ,.;:!?'"\n\-]{3,})\)/g);
+        rawText = readable ? readable.map(s => s.slice(1, -1).trim()).filter(Boolean).join(" ") : "";
+      }
     } catch (e) {
-      rawText = await file.text();
+      rawText = "";
     }
   } else if (ext === "rtf") {
     const rawRtf = await file.text();
@@ -1222,7 +1244,14 @@ function DuinoApp() {
   const [queue, setQueue] = useState(() => {
     try {
       const raw = vault.getItem("duino_queue_v2", []);
-      return Array.isArray(raw) ? raw : [];
+      if (!Array.isArray(raw)) return [];
+      return raw.filter(item => {
+        if (!item) return false;
+        if (typeof item.text === "string" && (item.text.startsWith("%00") || item.text.startsWith("%0C") || item.text.startsWith("%3C"))) {
+          return false;
+        }
+        return true;
+      });
     } catch (e) {
       return [];
     }
@@ -1273,11 +1302,19 @@ function DuinoApp() {
   // PERSISTENT LIVE TEXT & SPLIT STUDIO STATE (Preserved across tab switches & reloads)
   // -----------------------------------------------------------------------
   const [liveInputText, setLiveInputText] = useState(() => {
-    return vault.getItem("duino_live_input", "");
+    const val = vault.getItem("duino_live_input", "");
+    if (typeof val === "string" && (val.startsWith("%00") || val.startsWith("%0C") || val.startsWith("%3C"))) {
+      return "";
+    }
+    return val || "";
   });
 
   const [liveOutputText, setLiveOutputText] = useState(() => {
-    return vault.getItem("duino_live_output", "");
+    const val = vault.getItem("duino_live_output", "");
+    if (typeof val === "string" && (val.startsWith("%00") || val.startsWith("%0C") || val.startsWith("%3C"))) {
+      return "";
+    }
+    return val || "";
   });
 
   const [liveIsHumanizing, setLiveIsHumanizing] = useState(false);
@@ -1576,10 +1613,14 @@ function DuinoApp() {
         }
       } catch (err) {
         let fallbackText = "";
-        try { fallbackText = await file.text(); } catch (e) {}
+        const fileExt = (file.name.split('.').pop() || 'txt').toLowerCase();
+        if (!['docx', 'doc', 'pdf'].includes(fileExt)) {
+          try { fallbackText = await file.text(); } catch (e) {}
+        }
+        fallbackText = sanitizeClientText(fallbackText);
         newItems.push({
           filename: file.name,
-          doc_type: (file.name.split('.').pop() || 'txt').toLowerCase(),
+          doc_type: fileExt,
           size: file.size,
           status: "pending",
           progress: 0.0,
@@ -2559,6 +2600,37 @@ function StudioView({
                   >
                     <IconPaste />
                     <span>Paste</span>
+                  </button>
+                  <input
+                    type="file"
+                    id="studio-file-upload"
+                    style={{ display: "none" }}
+                    accept=".docx,.doc,.pdf,.txt,.md,.rtf,.html,.tex"
+                    onChange={async (e) => {
+                      const f = e.target.files && e.target.files[0];
+                      if (f) {
+                        try {
+                          const parsed = await parseDocumentFile(f);
+                          if (parsed && parsed.text) {
+                            setInputText(parsed.text);
+                          }
+                        } catch (err) {}
+                        e.target.value = "";
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ padding: "4px 8px", fontSize: "11px" }}
+                    onClick={() => {
+                      const el = document.getElementById("studio-file-upload");
+                      if (el) el.click();
+                    }}
+                    title="Upload & Parse Document (DOCX, PDF, TXT, MD)"
+                  >
+                    <IconUpload />
+                    <span>Upload</span>
                   </button>
                   <button
                     type="button"
