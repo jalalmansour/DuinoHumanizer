@@ -20,7 +20,7 @@ const crypto = require('crypto');
 const os = require('os');
 const { exec } = require('child_process');
 
-const HERE = path.resolve(__dirname);
+const HERE = process.env.VERCEL ? '/tmp' : path.resolve(__dirname);
 const VAULT_FILE = path.join(HERE, 'secure_vault.json');
 const DB_PATH = path.join(HERE, 'secure_vault.db');
 const SECRET_KEY = Buffer.from('DuinoInc_CheckerPRO_HMAC_SecretKey_2026_SecureVault_Jalal', 'utf-8');

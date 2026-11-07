@@ -135,7 +135,12 @@ function getApiHandler(endpointName) {
   for (const file of candidates) {
     if (fs.existsSync(file)) {
       try {
-        delete require.cache[require.resolve(file)]; // enable live hot-reloading of API endpoints!
+        // Clear cache for API and Paraphraser modules for live hot-reloading
+        Object.keys(require.cache).forEach(k => {
+          if (k.includes('paraphraser') || k.includes('api')) {
+            delete require.cache[k];
+          }
+        });
         return require(file);
       } catch (err) {
         console.error(`[API Error] Failed to require ${file}:`, err.message);

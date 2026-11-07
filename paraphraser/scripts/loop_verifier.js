@@ -47,7 +47,7 @@ class LoopParaphraseEngine {
     this.targetMaxAi = options.target_max_ai !== undefined ? options.target_max_ai : (options.targetMaxAi !== undefined ? options.targetMaxAi : 7.0);
     this.model = options.model || 'Super Ultra';
     this.purpose = options.purpose || 'Academic';
-    this.screenshotsDir = options.screenshots_dir || options.screenshotsDir || path.join(process.cwd(), 'screenshots');
+    this.screenshotsDir = options.screenshots_dir || options.screenshotsDir || (process.env.VERCEL ? '/tmp/screenshots' : path.join(process.cwd(), 'screenshots'));
     this.proxy = options.proxy || null;
 
     fs.mkdirSync(this.screenshotsDir, { recursive: true });
