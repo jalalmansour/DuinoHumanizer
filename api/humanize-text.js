@@ -298,45 +298,20 @@ module.exports = async (req, res) => {
     const isLimitless = parsedLoops === 0;
     const maxIterations = isLimitless ? 12 : Math.min(Math.max(parsedLoops || 4, 1), 25);
 
-    // Live Integration: Execute native JavaScript loop_verifier.js against ZeroGPT & SuperHumanizer
-    let loopVerifierModule = null;
-    let loadErr = null;
-    let execErr = null;
-
-    try {
-      loopVerifierModule = require('./paraphraser/scripts/loop_verifier.js');
-    } catch (e1) {
-      loadErr = e1;
-      try {
-        loopVerifierModule = require('../paraphraser/scripts/loop_verifier.js');
-        loadErr = null;
-      } catch (e2) {
-        loadErr = e2;
-        console.warn('[Duino Humanizer API] Could not locate loop_verifier.js:', e2.message);
-      }
-    }
-
-    const LoopParaphraseEngine = loopVerifierModule ? loopVerifierModule.LoopParaphraseEngine : null;
+    // Live Integration: Execute native verifier-engine against ZeroGPT & SuperHumanizer
+    const { LoopParaphraseEngine, recordVaultEntry } = require('./verifier-engine.js');
 
     console.log(`[Duino Humanizer API] Initiating Live Verification Engine (Model: ${model}, Target AI: <${targetThreshold}%)...`);
 
-    let jsResult = null;
-    if (LoopParaphraseEngine) {
-      try {
-        const engine = new LoopParaphraseEngine({
-          headless: true,
-          max_loops: isLimitless ? 0 : maxIterations,
-          target_max_ai: targetThreshold,
-          model: model,
-          purpose: purpose
-        });
+    const engine = new LoopParaphraseEngine({
+      headless: true,
+      max_loops: isLimitless ? 0 : maxIterations,
+      target_max_ai: targetThreshold,
+      model: model,
+      purpose: purpose
+    });
 
-        jsResult = await engine.run(rawInput);
-      } catch (engineErr) {
-        execErr = engineErr;
-        console.warn('[Duino Humanizer API] Live engine execution notice:', engineErr.message);
-      }
-    }
+    const jsResult = await engine.run(rawInput);
 
     if (jsResult && jsResult.final_text) {
       const finalHumanScore = jsResult.final_human_score ?? parseFloat((100 - (jsResult.final_ai_score || 0)).toFixed(1));
@@ -345,13 +320,7 @@ module.exports = async (req, res) => {
 
       // Log to secured database vault
       try {
-        let secDb;
-        try {
-          secDb = require('./paraphraser/scripts/secured_db.js');
-        } catch (_) {
-          secDb = require('../paraphraser/scripts/secured_db.js');
-        }
-        secDb.saveDocumentRecord({
+        recordVaultEntry({
           filename: 'live_stream.txt',
           original_text: rawInput,
           humanized_text: jsResult.final_text,
@@ -380,7 +349,7 @@ module.exports = async (req, res) => {
         },
         loops_executed: jsResult.iterations_completed || 1,
         loop_history: jsResult.history || [],
-        screenshots: jsResult.screenshots || [],
+        screenshots: [],
         model: model,
         purpose: purpose,
         target_ai: targetThreshold,
@@ -389,15 +358,7 @@ module.exports = async (req, res) => {
       });
     }
 
-    // If live engine had an error, report it directly so we diagnose accurately
-    if (loadErr || execErr) {
-      return res.status(500).json({
-        error: "Live Verification Engine error",
-        loadError: loadErr ? (loadErr.stack || loadErr.message) : null,
-        execError: execErr ? (execErr.stack || execErr.message) : null,
-        hasModule: !!loopVerifierModule
-      });
-    }
+
 
     // Offline Structural Anchor Isolation & Deterministic Mutation Fallback
     const baselineScore = 95.0;
