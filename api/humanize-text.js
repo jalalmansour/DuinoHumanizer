@@ -299,7 +299,13 @@ module.exports = async (req, res) => {
     const maxIterations = isLimitless ? 12 : Math.min(Math.max(parsedLoops || 4, 1), 25);
 
     // Live Integration: Execute native verifier-engine against ZeroGPT & SuperHumanizer
-    const { LoopParaphraseEngine, recordVaultEntry } = require('./verifier-engine.js');
+    let verifierMod;
+    try {
+      verifierMod = require('../lib/verifier-engine.js');
+    } catch (_) {
+      verifierMod = require('./verifier-engine.js');
+    }
+    const { LoopParaphraseEngine, recordVaultEntry } = verifierMod;
 
     console.log(`[Duino Humanizer API] Initiating Live Verification Engine (Model: ${model}, Target AI: <${targetThreshold}%)...`);
 

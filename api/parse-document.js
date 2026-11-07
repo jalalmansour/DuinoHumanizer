@@ -18,10 +18,15 @@ module.exports = async (req, res) => {
     let UniversalDocumentParser;
     let TextNormalizer;
     try {
-      UniversalDocumentParser = require('./document_parser.js').UniversalDocumentParser;
-      TextNormalizer = require('./text_normalizer.js').TextNormalizer;
-    } catch (reqErr) {
-      return res.status(500).json({ error: "Failed to load document parser: " + reqErr.message, stack: reqErr.stack });
+      UniversalDocumentParser = require('../lib/document_parser.js').UniversalDocumentParser;
+      TextNormalizer = require('../lib/text_normalizer.js').TextNormalizer;
+    } catch (_) {
+      try {
+        UniversalDocumentParser = require('./document_parser.js').UniversalDocumentParser;
+        TextNormalizer = require('./text_normalizer.js').TextNormalizer;
+      } catch (reqErr) {
+        return res.status(500).json({ error: "Failed to load document parser: " + reqErr.message, stack: reqErr.stack });
+      }
     }
 
     const {
