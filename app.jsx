@@ -1882,7 +1882,7 @@ function DuinoApp() {
       const cDiff = computeClientCharDiff(liveInputText, data.humanized_text);
       setLiveDiffSpans(wDiff);
       setLiveCharDiffSpans(cDiff);
-      setLiveDiffMode("word");
+      setLiveDiffMode(prev => prev || "clean");
 
       // Save to Persistent History Vault
       saveHistoryEntry({
