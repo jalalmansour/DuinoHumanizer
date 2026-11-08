@@ -307,7 +307,11 @@ class LoopParaphraseEngine {
         verdict: verdictText,
         description: descText,
         passed_gate: aiScore < this.targetMaxAi,
-        candidate_sample: candidateText.slice(0, 120) + '...'
+        candidate_sample: candidateText.slice(0, 120) + '...',
+        autoclicks: {
+          superhumanizer: `Mode: '${mode}' • Auto-click 'Humanize' executed`,
+          zerogpt: `Auto-click 'Detect Text' executed • Extracted: ${aiScore}% AI`
+        }
       });
 
       console.log(`[Iteration ${loopIdx} Result] AI Score: ${aiScore}% | Human Score: ${humanScore}%`);
