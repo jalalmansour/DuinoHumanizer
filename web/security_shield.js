@@ -192,6 +192,7 @@
   // -------------------------------------------------------------------------
   function triggerDebugTrap() {
     try {
+      if (navigator.webdriver || window.__DUINO_DISABLE_DEBUG_TRAP__) return;
       const debugFn = function () {
         return false;
       };
