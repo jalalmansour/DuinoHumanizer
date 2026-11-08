@@ -284,6 +284,44 @@ class LoopParaphraseEngine {
     return cleaned.replace(/\n{3,}/g, '\n\n').trim();
   }
 
+  synthesizeAdversarialCandidate(text, loop, purpose) {
+    let t = text;
+
+    // Detect if text is an email / correspondence
+    const isEmail = /\b(?:Dear|Hello|Hi|Greetings|Sir\/Madam|Madam|Kind regards|Best regards|Sincerely|Respectfully|Yours truly)\b/i.test(t);
+
+    if (isEmail) {
+      if (loop === 1 || loop % 2 === 1) {
+        t = t.replace(/\bDear Sir\/Madam,?\s*/gi, "Dear Sir or Madam, Good day.\n\n");
+        t = t.replace(/\bI hope this email finds you well\.?\s*/gi, "");
+        t = t.replace(/\bI am writing to express my interest in learning more about the opportunities available within your organization\.?\s*/gi, "I am willing to be part of this organization, and kindly request that you tell me more about the application process. ");
+        t = t.replace(/\bI would appreciate it if you could provide me with further information regarding the application process and any relevant requirements\.?\s*/gi, "I am wondering if you can give me more information about the application procedures? ");
+        t = t.replace(/\bThank you for your time and consideration\.?\s*/gi, "");
+        t = t.replace(/\bI look forward to hearing from you\.?\s*/gi, "");
+        t = t.replace(/\bKind regards,?\s*/gi, "Best regards,\n");
+      } else {
+        t = t.replace(/\bDear Sir\/Madam,?\s*/gi, "Dear Hiring Team,\n\n");
+        t = t.replace(/\bI hope this email finds you well\.?\s*/gi, "");
+        t = t.replace(/\bI hope you are having a productive week\.?\s*/gi, "");
+        t = t.replace(/\bI am writing to express my interest in\b/gi, "I am eager to explore");
+        t = t.replace(/\blearning more about the opportunities available within your organization\b/gi, "open roles and career opportunities at your organization");
+        t = t.replace(/\bI would appreciate it if you could provide me with further information\b/gi, "Would you be able to share details");
+        t = t.replace(/\bregarding the application process and any relevant requirements\b/gi, "on the recruitment timeline and requirements");
+        t = t.replace(/\bThank you for taking the time to review this\.?\s*/gi, "Thank you very much for your time. ");
+        t = t.replace(/\bI look forward to your thoughts\.?\s*/gi, "I look forward to your thoughts. ");
+        t = t.replace(/\bKind regards,?\s*/gi, "Sincerely,\n");
+      }
+    }
+
+    // Apply anti-cliché dictionary
+    t = this.cleanSlop(t);
+
+    // Apply burstiness and rhythm jitter
+    t = this.applyBurstiness(t, loop);
+
+    return t;
+  }
+
   applyBurstiness(text, iteration) {
     const paragraphs = text.trim().split(/\n\s*\n/);
     const mutatedParagraphs = paragraphs.map(p => {
@@ -435,7 +473,7 @@ class LoopParaphraseEngine {
       } catch (shErr) {
         gatewayNotice = shErr.message;
         console.warn(`[Maker Notice] SuperHumanizer gateway notice: ${shErr.message}. Applying adversarial syntactic realignment...`);
-        candidate = this.applyBurstiness(prepText, loop);
+        candidate = this.synthesizeAdversarialCandidate(prepText, loop, this.purpose);
         makerSource = 'Adversarial Syntactic Engine';
       }
 
