@@ -25,6 +25,7 @@
     "rcedit": "^5.0.2"
   },
   "dependencies": {
+    "@sparticuz/chromium-min": "^153.0.0",
     "playwright-core": "^1.65.0"
   }
 }

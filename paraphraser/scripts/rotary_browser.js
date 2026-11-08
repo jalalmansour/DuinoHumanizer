@@ -44,15 +44,24 @@ function findChromiumExecutable() {
   if (custom && fs.existsSync(custom)) return custom;
 
   const candidates = [
+    // Windows paths
     'C:\\Users\\jalal\\AppData\\Local\\ms-playwright\\chromium-1179\\chrome-win\\chrome.exe',
     'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
     'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
     'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe'
+    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+    // Linux / Lambda / Container standard paths
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    '/tmp/chromium'
   ];
 
   for (const c of candidates) {
-    if (fs.existsSync(c)) return c;
+    try {
+      if (fs.existsSync(c)) return c;
+    } catch (_) {}
   }
   return undefined;
 }
@@ -94,7 +103,29 @@ class RotaryBrowser {
       args: launchArgs
     };
 
-    const exe = findChromiumExecutable();
+    let exe = findChromiumExecutable();
+
+    // If no static binary found and running on Linux / Vercel Lambda, load @sparticuz/chromium-min
+    if (!exe && (process.platform === 'linux' || process.env.VERCEL)) {
+      try {
+        let chromiumPack = null;
+        try {
+          chromiumPack = require('@sparticuz/chromium-min').default || require('@sparticuz/chromium-min');
+        } catch (_) {}
+
+        if (chromiumPack && typeof chromiumPack.executablePath === 'function') {
+          const packUrl = process.env.CHROMIUM_PACK_URL || 'https://github.com/Sparticuz/chromium/releases/download/v131.0.0/chromium-v131.0.0-pack.tar';
+          console.log(`[RotaryBrowser] Initializing serverless Chromium pack for Playwright on ${process.platform}...`);
+          exe = await chromiumPack.executablePath(packUrl);
+          if (Array.isArray(chromiumPack.args)) {
+            launchOpts.args = Array.from(new Set([...chromiumPack.args, ...launchArgs]));
+          }
+        }
+      } catch (packErr) {
+        console.warn('[RotaryBrowser] Notice loading @sparticuz/chromium-min:', packErr.message);
+      }
+    }
+
     if (exe) {
       launchOpts.executablePath = exe;
     }

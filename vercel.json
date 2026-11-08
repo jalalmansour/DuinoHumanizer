@@ -1,9 +1,12 @@
 {
   "outputDirectory": "web",
   "buildCommand": "echo 'Duino Humanizer static bundle ready'",
-  "installCommand": "echo 'No external dependencies required'",
+  "installCommand": "npm install --omit=dev",
   "cleanUrls": true,
   "trailingSlash": false,
+  "env": {
+    "USE_PLAYWRIGHT": "1"
+  },
   "functions": {
     "api/*.js": {
       "includeFiles": "{lib/**,paraphraser/**}",

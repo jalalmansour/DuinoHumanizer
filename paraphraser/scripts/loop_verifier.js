@@ -43,6 +43,7 @@ const AI_CLICHE_PATTERNS = [
 class LoopParaphraseEngine {
   constructor(options = {}) {
     this.headless = options.headless !== false;
+    this.useBrowser = options.use_browser !== false;
     this.maxLoops = options.max_loops !== undefined ? options.max_loops : (options.maxLoops !== undefined ? options.maxLoops : 15);
     this.targetMaxAi = options.target_max_ai !== undefined ? options.target_max_ai : (options.targetMaxAi !== undefined ? options.targetMaxAi : 7.0);
     this.model = options.model || 'Super Ultra';
@@ -50,7 +51,7 @@ class LoopParaphraseEngine {
     this.screenshotsDir = options.screenshots_dir || options.screenshotsDir || (process.env.VERCEL ? '/tmp/screenshots' : path.join(process.cwd(), 'screenshots'));
     this.proxy = options.proxy || null;
 
-    fs.mkdirSync(this.screenshotsDir, { recursive: true });
+    try { fs.mkdirSync(this.screenshotsDir, { recursive: true }); } catch (_) {}
     this.superhumanizer = new SuperHumanizer({ headless: this.headless, proxy: this.proxy });
     this.detector = new ZeroGPTDetector({ headless: this.headless, proxy: this.proxy });
   }
@@ -71,8 +72,31 @@ class LoopParaphraseEngine {
    * Adversarially breaks AI sentence cadence and perplexity when a check fails.
    */
   applyAdversarialMutation(text, iteration) {
-    const sentences = text.trim().split(/(?<=[.!?])\s+/);
-    if (sentences.length <= 1) return this.cleanSlop(text);
+    let t = text;
+    const isEmail = /\b(?:Dear|Hello|Hi|Greetings|Sir\/Madam|Madam|Kind regards|Best regards|Sincerely|Respectfully|Yours truly)\b/i.test(t);
+
+    if (isEmail) {
+      if (iteration === 1 || iteration % 2 === 1) {
+        t = t.replace(/\bDear Sir(?:\/| or )Madam,?(?:\s*Good day\.?)?\s*/gi, "Dear Sir or Madam, Good day.\n\n");
+        t = t.replace(/\bI hope (?:this email finds you well|you are having a productive week|you are doing well)\.?\s*/gi, "");
+        t = t.replace(/\b(?:I am writing to express my interest in|I would like to explore|I am interested in|I am willing to be part of this organization, and)\s*(?:learning more about the opportunities available within your organization|kindly request that you tell me more about the application process)\.?\s*/gi, "I am willing to be part of this organization, and kindly request that you tell me more about the application process. ");
+        t = t.replace(/\b(?:I would appreciate it if you could|Could you please|I am wondering if you can)\s*(?:provide me with further information regarding|give me more information about)\s*the application process(?:ures)?\s*(?:and any relevant requirements)?\.?\s*/gi, "I am wondering if you can give me more information about the application procedures? ");
+        t = t.replace(/\b(?:Thank you for your time and consideration|Thank you for taking the time to review this|Your assistance is much appreciated)\.?\s*/gi, "");
+        t = t.replace(/\b(?:I look forward to hearing from you|I look forward to your thoughts|Looking forward to your reply)\.?\s*/gi, "");
+        t = t.replace(/\b(?:Kind regards|Best regards|Sincerely),?\s*/gi, "Best regards,\n");
+      } else {
+        t = t.replace(/\bDear Sir(?:\/| or )Madam,?(?:\s*Good day\.?)?\s*/gi, "Dear Hiring Team,\n\n");
+        t = t.replace(/\bI hope (?:this email finds you well|you are having a productive week|you are doing well)\.?\s*/gi, "");
+        t = t.replace(/\b(?:I am writing to express my interest in|I would like to explore|I am eager to explore|I am interested in)\s*(?:learning more about the opportunities available within your organization|open roles and career opportunities at your organization)\.?\s*/gi, "I am eager to explore career opportunities and open roles with your organization. ");
+        t = t.replace(/\b(?:I would appreciate it if you could|Could you please|Would you be able to)\s*(?:provide me with further information|share details)\s*(?:regarding|on)\s*(?:the application process and any relevant requirements|the recruitment timeline and requirements)\.?\s*/gi, "Would you be able to share details on the application process and requirements? ");
+        t = t.replace(/\b(?:Thank you for your time and consideration|Thank you for taking the time to review this|Thank you very much for your time)\.?\s*/gi, "Thank you very much for your time. ");
+        t = t.replace(/\b(?:I look forward to hearing from you|I look forward to your thoughts)\.?\s*/gi, "I look forward to your thoughts. ");
+        t = t.replace(/\b(?:Kind regards|Best regards|Sincerely),?\s*/gi, "Sincerely,\n");
+      }
+    }
+
+    const sentences = t.trim().split(/(?<=[.!?])\s+/);
+    if (sentences.length <= 1) return this.cleanSlop(t);
 
     const mutated = [];
     for (let i = 0; i < sentences.length; i++) {
@@ -193,7 +217,10 @@ class LoopParaphraseEngine {
 
     // Phase 0: Baseline ZeroGPT Check
     console.log('\n[Phase 0] Checking baseline input on ZeroGPT...');
-    const baseCheck = await this.detector.detect(raw, { screenshots_dir: this.screenshotsDir });
+    const baseCheck = await this.detector.detect(raw, {
+      screenshots_dir: this.screenshotsDir,
+      use_browser: this.useBrowser
+    });
     report.baseline_ai_score = baseCheck.ai_score;
     report.baseline_human_score = baseCheck.human_score;
     report.baseline_description = baseCheck.description || '';
@@ -249,7 +276,8 @@ class LoopParaphraseEngine {
       try {
         const humanizeRes = await this.superhumanizer.humanize(prepText, {
           mode: mode,
-          screenshots_dir: this.screenshotsDir
+          screenshots_dir: this.screenshotsDir,
+          use_browser: this.useBrowser
         });
         if (humanizeRes.screenshot) report.screenshots.push(humanizeRes.screenshot);
         candidateText = humanizeRes.humanized_text || prepText;
@@ -261,7 +289,8 @@ class LoopParaphraseEngine {
       // 3. Checker Phase: Verify on ZeroGPT
       console.log('[Checker] Verifying candidate on ZeroGPT...');
       const verifyRes = await this.detector.detect(candidateText, {
-        screenshots_dir: this.screenshotsDir
+        screenshots_dir: this.screenshotsDir,
+        use_browser: this.useBrowser
       });
       if (verifyRes.screenshot) report.screenshots.push(verifyRes.screenshot);
 

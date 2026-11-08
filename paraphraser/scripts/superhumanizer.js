@@ -187,7 +187,6 @@ class SuperHumanizer {
 
     const preferBrowser = options.use_browser === true || (
       process.env.USE_PLAYWRIGHT === '1' &&
-      !process.env.VERCEL &&
       options.use_api !== true
     );
 

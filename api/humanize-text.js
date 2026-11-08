@@ -284,7 +284,7 @@ module.exports = async (req, res) => {
       purpose = "Academic",
       target_ai = 7.0,
       max_loops = 4,
-      use_playwright = false
+      use_playwright = true
     } = req.body || {};
 
     if (!text || !text.trim()) {
@@ -298,27 +298,55 @@ module.exports = async (req, res) => {
     const isLimitless = parsedLoops === 0;
     const maxIterations = isLimitless ? 12 : Math.min(Math.max(parsedLoops || 4, 1), 25);
 
-    // Live Integration: Execute native verifier-engine against ZeroGPT & SuperHumanizer
+    // Enforce Playwright browser automation by default
+    process.env.USE_PLAYWRIGHT = '1';
+
+    console.log(`[Duino API] Executing JS Playwright automation against https://superhumanizer.ai/ and https://www.zerogpt.com/...`);
+
+    let jsResult = null;
     try {
-      let verifierMod;
+      let loopMod;
       try {
-        verifierMod = require('../lib/verifier-engine.js');
+        loopMod = require('../paraphraser/scripts/loop_verifier.js');
       } catch (_) {
-        verifierMod = require('./verifier-engine.js');
+        try {
+          loopMod = require('./loop_verifier.js');
+        } catch (_) {
+          loopMod = require('../lib/verifier-engine.js');
+        }
       }
-      const { LoopParaphraseEngine, recordVaultEntry } = verifierMod;
-
-      console.log(`[Duino Humanizer API] Initiating Live Verification Engine (Model: ${model}, Target AI: <${targetThreshold}%)...`);
-
+      const { LoopParaphraseEngine } = loopMod;
       const engine = new LoopParaphraseEngine({
         headless: true,
         max_loops: isLimitless ? 0 : maxIterations,
         target_max_ai: targetThreshold,
         model: model,
-        purpose: purpose
+        purpose: purpose,
+        use_browser: true
       });
 
-      const jsResult = await engine.run(rawInput);
+      jsResult = await engine.run(rawInput);
+    } catch (engineErr) {
+      console.warn(`[Duino API Notice] Playwright automation encounter: ${engineErr.message}. Executing resilient secondary verification pass...`);
+      try {
+        let fallbackMod;
+        try {
+          fallbackMod = require('../lib/verifier-engine.js');
+        } catch (_) {
+          fallbackMod = require('./verifier-engine.js');
+        }
+        const fallbackEngine = new fallbackMod.LoopParaphraseEngine({
+          headless: true,
+          max_loops: isLimitless ? 0 : maxIterations,
+          target_max_ai: targetThreshold,
+          model: model,
+          purpose: purpose
+        });
+        jsResult = await fallbackEngine.run(rawInput);
+      } catch (fbErr) {
+        console.error('[Duino API Fallback Error]', fbErr.message);
+      }
+    }
 
       if (jsResult && jsResult.final_text) {
         const finalHumanScore = jsResult.final_human_score ?? parseFloat((100 - (jsResult.final_ai_score || 0)).toFixed(1));
@@ -327,7 +355,8 @@ module.exports = async (req, res) => {
 
         // Log to secured database vault
         try {
-          recordVaultEntry({
+          const { saveDocumentRecord } = require('../paraphraser/scripts/secured_db.js');
+          saveDocumentRecord({
             filename: 'live_stream.txt',
             original_text: rawInput,
             humanized_text: jsResult.final_text,
@@ -364,11 +393,6 @@ module.exports = async (req, res) => {
           char_count: charCount
         });
       }
-    } catch (liveErr) {
-      console.warn(`[Live Engine Notice] Live verification encounter: ${liveErr.message}. Executing deterministic anchor-isolated mutation engine.`);
-    }
-
-
 
     // Offline Structural Anchor Isolation & Deterministic Mutation Fallback
     const baselineScore = 95.0;
