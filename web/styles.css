@@ -800,6 +800,147 @@ body.app-body {
   flex-wrap: wrap;
 }
 
+/* Toolbar & Button Layout Utilities */
+.input-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.output-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.toolbar-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+}
+
+.toolbar-group .btn {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: 3px 8px;
+  font-size: 11.5px;
+  height: 26px;
+  border-radius: 4px;
+  color: var(--text-secondary);
+}
+
+.toolbar-group .btn:hover:not(:disabled) {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+
+.toolbar-group .btn.active {
+  background: var(--accent-surface);
+  color: var(--accent);
+}
+
+.toolbar-group .btn-primary {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+.toolbar-group .btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  color: #ffffff;
+}
+
+.btn-compact {
+  padding: 3px 8px;
+  font-size: 11.5px;
+  height: 26px;
+  gap: 4px;
+}
+
+.btn-humanize-action {
+  height: 32px;
+  padding: 0 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.input-footer-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.output-footer-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+.output-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.footer-counts {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.verified-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  border-radius: var(--radius-sm);
+  color: #6ee7b7;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.verified-pill svg {
+  width: 12px;
+  height: 12px;
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+.tab-label-full {
+  display: inline;
+}
+
+.tab-label-short {
+  display: none;
+}
+
+.verified-pill-text-full {
+  display: inline;
+}
+
+.verified-pill-text-short {
+  display: none;
+}
+
+.export-btn-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 /* ==========================================================================
    Multi-step Pipeline Progress Bar for Live Text & Files
    ========================================================================== */
@@ -2179,45 +2320,86 @@ body.app-body {
   }
 
   .split-panel-header {
-    flex-wrap: wrap;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
     gap: 8px;
-    padding: 8px 12px;
+    padding: 10px 12px;
   }
 
-  .split-panel-header > div:last-child {
+  .split-panel-title {
     width: 100%;
+    justify-content: space-between;
+  }
+
+  .input-header-actions {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     flex-wrap: wrap;
-    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  .output-header-actions {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
   }
 
   .diff-view-segmented {
     width: 100%;
-    order: 3;
     display: flex;
+    gap: 2px;
   }
 
   .diff-segment-btn {
     flex: 1;
     justify-content: center;
-    font-size: 11px;
-    padding: 4px 6px;
+    font-size: 10.5px;
+    padding: 5px 3px;
+    text-align: center;
+  }
+
+  .tab-label-full {
+    display: none;
+  }
+
+  .tab-label-short {
+    display: inline;
+  }
+
+  .verified-pill-text-full {
+    display: none;
+  }
+
+  .verified-pill-text-short {
+    display: inline;
   }
 
   .split-panel-footer {
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 10px 12px;
   }
 
-  .split-panel-footer > button,
-  .split-panel-footer > div {
+  .input-footer-stats {
     width: 100%;
-    justify-content: center;
-  }
-
-  .split-panel-footer > div {
     display: flex;
     justify-content: space-between;
+    font-size: 11px;
+  }
+
+  .btn-humanize-action {
+    width: 100%;
+    height: 40px;
+    font-size: 13px;
+    font-weight: 600;
+    justify-content: center;
   }
 
   .kpi-grid {
@@ -2278,5 +2460,53 @@ body.app-body {
   .export-btn-group {
     flex: 1;
     justify-content: flex-end;
+  }
+}
+
+/* ==========================================================================
+   Wide Screen Optimizations (>= 1200px)
+   ========================================================================== */
+@media (min-width: 1200px) {
+  .split-studio-container {
+    gap: 20px;
+  }
+
+  .split-panel {
+    min-height: 580px;
+  }
+
+  .split-panel-header {
+    padding: 12px 18px;
+  }
+
+  .split-panel-footer {
+    padding: 12px 18px;
+  }
+
+  .toolbar-group {
+    gap: 3px;
+    padding: 3px;
+  }
+
+  .toolbar-group .btn {
+    padding: 4px 10px;
+    font-size: 12px;
+    height: 28px;
+  }
+
+  .diff-view-segmented {
+    padding: 3px;
+    gap: 3px;
+  }
+
+  .diff-segment-btn {
+    padding: 4px 10px;
+    font-size: 11.5px;
+  }
+
+  .btn-humanize-action {
+    height: 34px;
+    padding: 0 16px;
+    font-size: 13px;
   }
 }

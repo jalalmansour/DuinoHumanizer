@@ -299,69 +299,73 @@ module.exports = async (req, res) => {
     const maxIterations = isLimitless ? 12 : Math.min(Math.max(parsedLoops || 4, 1), 25);
 
     // Live Integration: Execute native verifier-engine against ZeroGPT & SuperHumanizer
-    let verifierMod;
     try {
-      verifierMod = require('../lib/verifier-engine.js');
-    } catch (_) {
-      verifierMod = require('./verifier-engine.js');
-    }
-    const { LoopParaphraseEngine, recordVaultEntry } = verifierMod;
-
-    console.log(`[Duino Humanizer API] Initiating Live Verification Engine (Model: ${model}, Target AI: <${targetThreshold}%)...`);
-
-    const engine = new LoopParaphraseEngine({
-      headless: true,
-      max_loops: isLimitless ? 0 : maxIterations,
-      target_max_ai: targetThreshold,
-      model: model,
-      purpose: purpose
-    });
-
-    const jsResult = await engine.run(rawInput);
-
-    if (jsResult && jsResult.final_text) {
-      const finalHumanScore = jsResult.final_human_score ?? parseFloat((100 - (jsResult.final_ai_score || 0)).toFixed(1));
-      const wordCount = (jsResult.final_text || "").split(/\s+/).filter(Boolean).length;
-      const charCount = (jsResult.final_text || "").length;
-
-      // Log to secured database vault
+      let verifierMod;
       try {
-        recordVaultEntry({
-          filename: 'live_stream.txt',
-          original_text: rawInput,
-          humanized_text: jsResult.final_text,
-          baseline_ai: jsResult.baseline_ai_score || 0.0,
-          final_ai: jsResult.final_ai_score || 0.0,
-          word_count: wordCount,
-          status: 'COMPLETED'
-        });
-      } catch (ve) {}
+        verifierMod = require('../lib/verifier-engine.js');
+      } catch (_) {
+        verifierMod = require('./verifier-engine.js');
+      }
+      const { LoopParaphraseEngine, recordVaultEntry } = verifierMod;
 
-      return res.status(200).json({
-        success: true,
-        humanized_text: jsResult.final_text,
-        baseline_ai_score: jsResult.baseline_ai_score,
-        final_ai_score: jsResult.final_ai_score,
-        final_human_score: finalHumanScore,
-        verdict: jsResult.final_verdict || "Human Written",
-        description: jsResult.final_description || "Native JavaScript ZeroGPT verification pass complete.",
-        zerogpt_result: {
-          is_human: (jsResult.final_ai_score || 0) < targetThreshold,
-          ai_percentage: jsResult.final_ai_score,
-          human_percentage: finalHumanScore,
-          verdict: jsResult.final_verdict || "ZeroGPT Undetectable",
-          status: "PASS",
-          confidence: "High"
-        },
-        loops_executed: jsResult.iterations_completed || 1,
-        loop_history: jsResult.history || [],
-        screenshots: [],
+      console.log(`[Duino Humanizer API] Initiating Live Verification Engine (Model: ${model}, Target AI: <${targetThreshold}%)...`);
+
+      const engine = new LoopParaphraseEngine({
+        headless: true,
+        max_loops: isLimitless ? 0 : maxIterations,
+        target_max_ai: targetThreshold,
         model: model,
-        purpose: purpose,
-        target_ai: targetThreshold,
-        word_count: wordCount,
-        char_count: charCount
+        purpose: purpose
       });
+
+      const jsResult = await engine.run(rawInput);
+
+      if (jsResult && jsResult.final_text) {
+        const finalHumanScore = jsResult.final_human_score ?? parseFloat((100 - (jsResult.final_ai_score || 0)).toFixed(1));
+        const wordCount = (jsResult.final_text || "").split(/\s+/).filter(Boolean).length;
+        const charCount = (jsResult.final_text || "").length;
+
+        // Log to secured database vault
+        try {
+          recordVaultEntry({
+            filename: 'live_stream.txt',
+            original_text: rawInput,
+            humanized_text: jsResult.final_text,
+            baseline_ai: jsResult.baseline_ai_score || 0.0,
+            final_ai: jsResult.final_ai_score || 0.0,
+            word_count: wordCount,
+            status: 'COMPLETED'
+          });
+        } catch (ve) {}
+
+        return res.status(200).json({
+          success: true,
+          humanized_text: jsResult.final_text,
+          baseline_ai_score: jsResult.baseline_ai_score,
+          final_ai_score: jsResult.final_ai_score,
+          final_human_score: finalHumanScore,
+          verdict: jsResult.final_verdict || "Human Written",
+          description: jsResult.final_description || "Native JavaScript ZeroGPT verification pass complete.",
+          zerogpt_result: {
+            is_human: (jsResult.final_ai_score || 0) < targetThreshold,
+            ai_percentage: jsResult.final_ai_score,
+            human_percentage: finalHumanScore,
+            verdict: jsResult.final_verdict || "ZeroGPT Undetectable",
+            status: "PASS",
+            confidence: "High"
+          },
+          loops_executed: jsResult.iterations_completed || 1,
+          loop_history: jsResult.history || [],
+          screenshots: [],
+          model: model,
+          purpose: purpose,
+          target_ai: targetThreshold,
+          word_count: wordCount,
+          char_count: charCount
+        });
+      }
+    } catch (liveErr) {
+      console.warn(`[Live Engine Notice] Live verification encounter: ${liveErr.message}. Executing deterministic anchor-isolated mutation engine.`);
     }
 
 

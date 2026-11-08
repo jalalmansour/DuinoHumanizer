@@ -2596,7 +2596,7 @@ function StudioView({
                     </span>
                   )}
                 </div>
-                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                <div className="input-header-actions">
                   {/* Group 1: Document Upload & Paste */}
                   <div className="toolbar-group">
                     <input
@@ -2619,8 +2619,7 @@ function StudioView({
                     />
                     <button
                       type="button"
-                      className="btn btn-secondary"
-                      style={{ padding: "4px 8px", fontSize: "11px" }}
+                      className="btn btn-secondary btn-compact"
                       onClick={() => {
                         const el = document.getElementById("studio-file-upload");
                         if (el) el.click();
@@ -2632,8 +2631,7 @@ function StudioView({
                     </button>
                     <button
                       type="button"
-                      className="btn btn-secondary"
-                      style={{ padding: "4px 8px", fontSize: "11px" }}
+                      className="btn btn-secondary btn-compact"
                       onClick={handlePasteClipboard}
                       title="Paste from clipboard"
                     >
@@ -2646,8 +2644,7 @@ function StudioView({
                   <div className="toolbar-group">
                     <button
                       type="button"
-                      className="btn btn-secondary"
-                      style={{ padding: "4px 8px", fontSize: "11px" }}
+                      className="btn btn-secondary btn-compact"
                       onClick={handleSanitizeText}
                       title="Sanitize text & normalize invisible characters"
                       disabled={!inputText.trim()}
@@ -2657,8 +2654,7 @@ function StudioView({
                     </button>
                     <button
                       type="button"
-                      className="btn btn-secondary"
-                      style={{ padding: "4px 8px", fontSize: "11px" }}
+                      className="btn btn-secondary btn-compact"
                       onClick={() => setInputText("")}
                       disabled={!inputText.trim()}
                       title="Clear input"
@@ -2672,8 +2668,7 @@ function StudioView({
                   {inputText && outputText && (
                     <button
                       type="button"
-                      className={`btn btn-secondary ${showOrigDiff ? "active" : ""}`}
-                      style={{ padding: "4px 8px", fontSize: "11px" }}
+                      className={`btn btn-secondary btn-compact ${showOrigDiff ? "active" : ""}`}
                       onClick={() => setShowOrigDiff(!showOrigDiff)}
                       title="Toggle Original Highlight Comparison"
                     >
@@ -2730,7 +2725,7 @@ function StudioView({
               </div>
 
               <div className="split-panel-footer">
-                <div style={{ display: "flex", gap: "10px", fontSize: "11px", color: "var(--text-muted)", flexWrap: "wrap" }}>
+                <div className="input-footer-stats">
                   <span>Words: <strong className="num-tabular" style={{ color: "var(--text-primary)" }}>{inputWords.toLocaleString()}</strong></span>
                   <span>Chars: <strong className="num-tabular" style={{ color: "var(--text-primary)" }}>{inputChars.toLocaleString()}</strong></span>
                   <span>Headings: <strong className="num-tabular" style={{ color: "var(--text-primary)" }}>{detectedHeadings}</strong></span>
@@ -2738,7 +2733,7 @@ function StudioView({
 
                 <button
                   type="button"
-                  className="btn btn-primary"
+                  className="btn btn-primary btn-humanize-action"
                   onClick={onExecuteHumanize}
                   disabled={!inputText.trim() || isHumanizingText}
                 >
@@ -2760,7 +2755,7 @@ function StudioView({
                   {copiedToast && (
                     <span className="toast-badge">
                       <IconCheck />
-                      <span>Copied to clipboard</span>
+                      <span>Copied</span>
                     </span>
                   )}
 
@@ -2773,7 +2768,8 @@ function StudioView({
                         title="Pristine editorial reading view"
                       >
                         <IconEye />
-                        <span>Reading View</span>
+                        <span className="tab-label-full">Reading View</span>
+                        <span className="tab-label-short">Reading</span>
                       </button>
                       <button
                         type="button"
@@ -2782,7 +2778,8 @@ function StudioView({
                         title="Highlight modified words with subtle underlines"
                       >
                         <IconDiff />
-                        <span>Word Diff ({humWordChangedCount})</span>
+                        <span className="tab-label-full">Word Diff ({humWordChangedCount})</span>
+                        <span className="tab-label-short">Word ({humWordChangedCount})</span>
                       </button>
                       <button
                         type="button"
@@ -2791,7 +2788,8 @@ function StudioView({
                         title="Highlight exact character differences"
                       >
                         <IconDiff />
-                        <span>Char Diff ({humCharChangedCount})</span>
+                        <span className="tab-label-full">Char Diff ({humCharChangedCount})</span>
+                        <span className="tab-label-short">Char ({humCharChangedCount})</span>
                       </button>
                       <button
                         type="button"
@@ -2800,44 +2798,44 @@ function StudioView({
                         title="Plain editable text mode"
                       >
                         <IconEdit />
-                        <span>Plain Editor</span>
+                        <span className="tab-label-full">Plain Editor</span>
+                        <span className="tab-label-short">Editor</span>
                       </button>
                     </div>
                   )}
 
-                  <button
-                    type="button"
-                    className={`btn btn-secondary ${showAuditModal ? "active" : ""}`}
-                    style={{ padding: "4px 8px", fontSize: "11px" }}
-                    onClick={() => setShowAuditModal(true)}
-                    title="ZeroGPT Loop Verification Audit"
-                  >
-                    <IconShield />
-                    <span>Audit Loop</span>
-                  </button>
+                  <div className="toolbar-group">
+                    <button
+                      type="button"
+                      className={`btn btn-secondary btn-compact ${showAuditModal ? "active" : ""}`}
+                      onClick={() => setShowAuditModal(true)}
+                      title="ZeroGPT Loop Verification Audit"
+                    >
+                      <IconShield />
+                      <span>Audit</span>
+                    </button>
 
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    style={{ padding: "4px 8px", fontSize: "11px" }}
-                    onClick={onOpenHistory}
-                    title="View History Vault"
-                  >
-                    <IconHistory />
-                    <span>History</span>
-                  </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-compact"
+                      onClick={onOpenHistory}
+                      title="View History Vault"
+                    >
+                      <IconHistory />
+                      <span>History</span>
+                    </button>
 
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    style={{ padding: "4px 10px", fontSize: "11px" }}
-                    onClick={handleCopyOutput}
-                    disabled={!outputText}
-                    title="Copy deliverable"
-                  >
-                    <IconCopy />
-                    <span>Copy</span>
-                  </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-compact"
+                      onClick={handleCopyOutput}
+                      disabled={!outputText}
+                      title="Copy deliverable"
+                    >
+                      <IconCopy />
+                      <span>Copy</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -2917,12 +2915,15 @@ function StudioView({
 
               <div className="split-panel-footer">
                 <div className="output-footer-stats">
-                  <span>Words: <strong className="num-tabular" style={{ color: "var(--text-primary)" }}>{outputText.trim() ? outputText.trim().split(/\s+/).length.toLocaleString() : 0}</strong></span>
-                  <span>Chars: <strong className="num-tabular" style={{ color: "var(--text-primary)" }}>{outputText.length.toLocaleString()}</strong></span>
+                  <div className="footer-counts">
+                    <span>Words: <strong className="num-tabular" style={{ color: "var(--text-primary)" }}>{outputText.trim() ? outputText.trim().split(/\s+/).length.toLocaleString() : 0}</strong></span>
+                    <span>Chars: <strong className="num-tabular" style={{ color: "var(--text-primary)" }}>{outputText.length.toLocaleString()}</strong></span>
+                  </div>
                   {textMetrics.final_score !== null && (
                     <span className="verified-pill">
                       <IconCheck />
-                      <span>ZeroGPT Verified: <strong className="num-tabular">{textMetrics.final_score}% AI</strong> ({textMetrics.human_score}% Human) • <strong className="num-tabular">{textMetrics.loops_executed || 1}</strong> loop{(textMetrics.loops_executed || 1) > 1 ? 's' : ''}</span>
+                      <span className="verified-pill-text-full">ZeroGPT Verified: <strong className="num-tabular">{textMetrics.final_score}% AI</strong> ({textMetrics.human_score}% Human) • <strong className="num-tabular">{textMetrics.loops_executed || 1}</strong> loop{(textMetrics.loops_executed || 1) > 1 ? 's' : ''}</span>
+                      <span className="verified-pill-text-short">ZeroGPT: <strong className="num-tabular">{textMetrics.final_score}% AI</strong></span>
                     </span>
                   )}
                 </div>
@@ -2930,8 +2931,7 @@ function StudioView({
                 <div className="output-footer-actions">
                   <button
                     type="button"
-                    className="btn btn-secondary"
-                    style={{ padding: "4px 9px", fontSize: "11px" }}
+                    className="btn btn-secondary btn-compact"
                     onClick={onExecuteHumanize}
                     disabled={!inputText.trim() || isHumanizingText}
                     title="Re-run humanization loop verification"
@@ -2943,8 +2943,7 @@ function StudioView({
                   <div className="export-btn-group">
                     <button
                       type="button"
-                      className="btn btn-secondary"
-                      style={{ padding: "4px 8px", fontSize: "11px" }}
+                      className="btn btn-secondary btn-compact"
                       onClick={() => handleExportText("docx")}
                       disabled={!outputText}
                       title="Export Microsoft Word DOCX"
@@ -2954,8 +2953,7 @@ function StudioView({
                     </button>
                     <button
                       type="button"
-                      className="btn btn-secondary"
-                      style={{ padding: "4px 8px", fontSize: "11px" }}
+                      className="btn btn-secondary btn-compact"
                       onClick={() => handleExportText("pdf")}
                       disabled={!outputText}
                       title="Export Adobe PDF"
@@ -2965,8 +2963,7 @@ function StudioView({
                     </button>
                     <button
                       type="button"
-                      className="btn btn-secondary"
-                      style={{ padding: "4px 8px", fontSize: "11px" }}
+                      className="btn btn-secondary btn-compact"
                       onClick={() => handleExportText("txt")}
                       disabled={!outputText}
                       title="Export Plain Text"
