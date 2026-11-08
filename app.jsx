@@ -1212,12 +1212,15 @@ function DuinoApp() {
     removeItem: (k) => { try { localStorage.removeItem(k); } catch (_) {} }
   };
 
-  // Sidebar Collapsed State (Persisted in Vault)
+  // Sidebar Collapsed State (Persisted in Vault - defaults to collapsed on mobile)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try {
+      if (typeof window !== "undefined" && window.innerWidth <= 768) {
+        return true;
+      }
       return vault.getItem("duino_sidebar_collapsed", false) === true;
     } catch (e) {
-      return false;
+      return typeof window !== "undefined" && window.innerWidth <= 768;
     }
   });
 
